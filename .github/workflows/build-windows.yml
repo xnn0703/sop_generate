@@ -69,12 +69,13 @@ jobs:
           path: dist/sop_generate-win/
           retention-days: 14
 
-      - name: 7z 极限压缩 + 80MB 切片
+      - name: 7z 极限压缩 + 30MB 切片
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           cd dist
-          # LZMA2 极限压缩，单卷 80MB（确保单文件 < Gitee 100MB 限制）
-          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mmt=on -v80m sop_generate-win-latest.7z sop_generate-win\ | Out-Null
+          # LZMA2 极限压缩，单卷 30MB（单卷失败可单独重传，跨境上传更稳）
+          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mmt=on -v30m sop_generate-win-latest.7z sop_generate-win\ | Out-Null
           $parts = Get-ChildItem sop_generate-win-latest.7z.*
           Write-Host "分卷数：$($parts.Count)"
           $total = 0
@@ -85,8 +86,8 @@ jobs:
           }
           Write-Host "压缩总大小：$([math]::Round($total / 1MB, 1)) MB"
 
-      - name: 同步到 Gitee Release (latest)
-        if: github.ref == 'refs/heads/main' && env.GITEE_TOKEN != ''
+      - name: 同步到 Gitee Release (仅 tag 触发)
+        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
         shell: pwsh
         run: |
           $owner = 'soft-hertz'
@@ -94,22 +95,24 @@ jobs:
           $api   = "https://gitee.com/api/v5/repos/$owner/$repo"
           $tok   = $env:GITEE_TOKEN
 
-          # 删除旧 latest release
+          $tag = '${{ github.ref_name }}'
+
+          # 删除已存在的同名 release（重跑同 tag 时）
           try {
-            $existing = Invoke-RestMethod -Uri "$api/releases/tags/latest?access_token=$tok" -Method Get -ErrorAction Stop
-            Write-Host "删除旧 latest release id=$($existing.id)"
+            $existing = Invoke-RestMethod -Uri "$api/releases/tags/$tag`?access_token=$tok" -Method Get -ErrorAction Stop
+            Write-Host "删除旧 $tag release id=$($existing.id)"
             Invoke-RestMethod -Uri "$api/releases/$($existing.id)?access_token=$tok" -Method Delete | Out-Null
           } catch {
-            Write-Host "无旧 latest release，跳过删除"
+            Write-Host "无旧 $tag release，跳过删除"
           }
 
           # 创建新 release
           $sha = (git rev-parse --short HEAD).Trim()
           $bodyText = @(
-            "自动构建 (commit $sha)。",
+            "稳定版本 **$tag** (commit $sha)。",
             "",
             "**下载说明：**",
-            "1. 把所有 sop_generate-win-latest.7z.001 / .002 / .003 ... 全部下载到同一文件夹",
+            "1. 把所有 sop_generate-win-$tag.7z.001 / .002 / .003 ... 全部下载到同一文件夹",
             "2. 安装 7-Zip：https://www.7-zip.org/",
             "3. 选中 .001 文件 → 右键 → 7-Zip → 解压到当前位置",
             "4. 进入解压后的目录，双击 sop_generate.exe 启动",
@@ -118,62 +121,54 @@ jobs:
           ) -join "`n"
           $payload = @{
             access_token     = $tok
-            tag_name         = 'latest'
+            tag_name         = $tag
             target_commitish = 'main'
-            name             = "最新构建 ($sha)"
+            name             = $tag
             body             = $bodyText
             prerelease       = $false
           } | ConvertTo-Json -Depth 3
           $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
           Write-Host "新 release id=$($release.id)"
 
-          # 按顺序上传所有分卷
+          # 按顺序上传所有分卷（重命名为含 tag 的文件名）
           $parts = Get-ChildItem dist\sop_generate-win-latest.7z.* | Sort-Object Name
           foreach ($p in $parts) {
-            $mb = [math]::Round($p.Length / 1MB, 1)
-            Write-Host "上传 $($p.Name) ($mb MB)..."
-            try {
-              $r = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" `
-                                     -Method Post -Form @{ file = $p } -TimeoutSec 600
-              Write-Host "  ✓ $($r.name)"
-            } catch {
-              Write-Host "::error::上传 $($p.Name) 失败：$_"
-              throw
+            $newName = $p.Name -replace 'sop_generate-win-latest', "sop_generate-win-$tag"
+            $newPath = Join-Path $p.Directory.FullName $newName
+            Rename-Item $p.FullName $newPath
+            $newFile = Get-Item $newPath
+            $mb = [math]::Round($newFile.Length / 1MB, 1)
+
+            # 跨境上传：超时 3600s + 最多重试 3 次
+            $maxRetry = 3
+            for ($i = 1; $i -le $maxRetry; $i++) {
+              Write-Host "上传 $($newFile.Name) ($mb MB)，尝试 $i/$maxRetry..."
+              try {
+                $r = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" `
+                                       -Method Post -Form @{ file = $newFile } -TimeoutSec 3600
+                Write-Host "  ✓ $($r.name)"
+                break
+              } catch {
+                Write-Host "::warning::尝试 $i 失败：$_"
+                if ($i -eq $maxRetry) {
+                  Write-Host "::error::上传 $($newFile.Name) 经 $maxRetry 次重试仍失败"
+                  throw
+                }
+                Start-Sleep -Seconds 10
+              }
             }
           }
           Write-Host "✓ 全部分卷已挂载到 Gitee Release"
-          Write-Host "下载页：https://gitee.com/$owner/$repo/releases/tag/latest"
+          Write-Host "下载页：https://gitee.com/$owner/$repo/releases/tag/$tag"
 
-      - name: 创建稳定版 Release（GitHub + Gitee，仅 v* tag 触发）
+      - name: 创建 GitHub Release (仅 tag 触发)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = '${{ github.ref_name }}'
-          $parts = Get-ChildItem dist\sop_generate-win-latest.7z.* | Sort-Object Name
-
-          # GitHub Release（一次性传所有分卷）
+          # 此时分卷已被前一步重命名为 sop_generate-win-<tag>.7z.NNN
+          $parts = Get-ChildItem dist\sop_generate-win-$tag.7z.* | Sort-Object Name
           gh release create $tag ($parts.FullName) --generate-notes
-
-          # Gitee Release（如果配置了 token）
-          if ($env:GITEE_TOKEN) {
-            $owner = 'soft-hertz'; $repo = 'sop_generate'
-            $api = "https://gitee.com/api/v5/repos/$owner/$repo"
-            $body = "稳定版本 $tag。`n`n下载所有 .7z.NNN 分卷到同一文件夹，用 7-Zip 解压 .001 即可。`n双击 sop_generate.exe 启动。"
-            $payload = @{
-              access_token     = $env:GITEE_TOKEN
-              tag_name         = $tag
-              target_commitish = 'main'
-              name             = $tag
-              body             = $body
-              prerelease       = $false
-            } | ConvertTo-Json
-            $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
-            foreach ($p in $parts) {
-              Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$($env:GITEE_TOKEN)" `
-                                -Method Post -Form @{ file = $p } -TimeoutSec 600 | Out-Null
-              Write-Host "  ✓ $($p.Name)"
-            }
-            Write-Host "✓ Gitee Release $tag 已发布"
-          }
+          Write-Host "✓ GitHub Release $tag 已发布"
