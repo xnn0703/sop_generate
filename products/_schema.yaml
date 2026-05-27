@@ -1,0 +1,49 @@
+# =============================================================
+# sop_generate · YAML 字段规范
+# =============================================================
+# 这份文件是字段定义和示例，不会被 gen.py 渲染。
+# 实际产品 YAML 放在 products/XXXX.yaml，结构与下方 example 一致。
+
+# -------- 字段约束（validator.py 强制） --------
+# product.model:            必填，仅 ASCII 字母数字（用作文件名）
+# product.name:             必填，≤ 12 个汉字
+# product.company:          必填
+# product.doc_id:           必填
+# product.version:          必填，形如 A/0、B/1
+# product.publish_date:     必填，形如 YYYY-M-D
+# product.effective_date:   必填，形如 YYYY-M-D
+#
+# processes:                必填，1-16 项
+#   - name:                 必填，≤ 12 个汉字
+#     key:                  布尔，true 表示关键工序（封面/目录/工序页加 ★）
+#     operations:           1-6 条，每条 ≤ 30 个汉字
+#     notes:                0-4 条，每条 ≤ 28 个汉字
+#     images:               1-2 个文件名，文件必须在 assets/images/<model>/ 下
+#     tools:                1-4 项，每项 ≤ 10 个汉字
+#     materials:            1-4 项，每项 ≤ 10 个汉字
+
+# -------- 示例 --------
+example:
+  product:
+    model: DEMO01
+    name: 示例产品
+    company: 南京软赫电子科技有限公司
+    doc_id: SH-ZY-99
+    version: A/0
+    publish_date: 2026-1-1
+    effective_date: 2026-1-15
+
+  processes:
+    - name: 示例工序
+      key: true                       # 关键工序加 ★
+      operations:
+        - 第一步：取一个零件
+        - 第二步：装到对应位置
+      notes:
+        - 注意佩戴防静电手环
+      images:
+        - 示例工序.png                # 实际文件放 assets/images/DEMO01/
+      tools:
+        - 螺丝刀
+      materials:
+        - M3×6 螺钉

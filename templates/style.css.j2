@@ -1,0 +1,192 @@
+/* ===== 打印分页：纵向 / 横向命名页 ===== */
+@page portrait  { size: A4 portrait;  margin: 18mm 16mm; }
+@page landscape { size: A4 landscape; margin: 12mm 14mm; }
+.page-portrait  { page: portrait; }
+.page-landscape { page: landscape; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "FangSong", "仿宋", "FangSong_GB2312", "SimSun", "宋体", serif;
+  font-size: 11pt;
+  color: #000;
+  background: #e8e8e8;
+}
+
+/* 屏幕预览：模拟纸张 */
+.page {
+  margin: 8mm auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  page-break-after: always;
+  break-after: page;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  overflow: hidden;
+  position: relative;
+}
+.page-portrait  { width: 210mm; height: 297mm; padding: 18mm 16mm; }
+.page-landscape { width: 297mm; height: 210mm; padding: 10mm 12mm; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+
+@media print {
+  body { background: #fff; }
+  .page { width: auto; height: auto; padding: 0; margin: 0; box-shadow: none; }
+}
+
+/* 防止任何内部表格被分页拆开 */
+table, tr, td { page-break-inside: avoid; break-inside: avoid; }
+
+/* ===== 封面 ===== */
+.cover { text-align: center; padding-top: 25mm; }
+.cover .company {
+  font-family: "FangSong_GB2312", "仿宋", serif;
+  font-size: 28pt; font-weight: bold; color: #339966;
+  margin-bottom: 35mm; letter-spacing: 4px;
+}
+.cover .model {
+  font-size: 48pt; font-weight: bold; color: #0000FF;
+  letter-spacing: 6px; line-height: 1.4;
+}
+.cover .doc-title {
+  font-size: 48pt; font-weight: bold; color: #0000FF;
+  letter-spacing: 12px; margin-bottom: 30mm;
+}
+.cover .doc-info { font-size: 14pt; line-height: 2.4; margin-top: 10mm; }
+.cover .controlled { margin-top: 14mm; font-size: 14pt; }
+.cover .controlled-box {
+  display: inline-block; border: 1.5pt solid #000;
+  padding: 4mm 18mm; margin-top: 4mm;
+}
+.cover .signers, .cover .dates {
+  margin-top: 18mm; font-size: 13pt;
+  display: flex; justify-content: space-around;
+}
+.cover .dates { margin-top: 10mm; }
+
+/* ===== 公司表头（纵向页用） ===== */
+table.head {
+  width: 100%; border-collapse: collapse;
+  margin-bottom: 4mm; font-size: 11pt;
+}
+table.head td {
+  border: 1pt solid #000; text-align: center;
+  padding: 1.5mm 2mm; height: 8mm;
+}
+table.head .company-row td {
+  font-family: "FangSong_GB2312", "仿宋", serif;
+  font-size: 16pt; font-weight: bold;
+  color: #339966; height: 12mm;
+}
+table.head .label { background: #f3f3f3; font-weight: bold; width: 12%; }
+table.head .value { width: 21%; }
+
+/* ===== 目录表 ===== */
+table.toc {
+  width: 100%; border-collapse: collapse;
+  margin-top: 4mm; font-size: 11.5pt;
+}
+table.toc th, table.toc td {
+  border: 1pt solid #000; padding: 2.5mm 2mm;
+  text-align: center; height: 9mm;
+}
+table.toc th { background: #f3f3f3; font-weight: bold; }
+
+/* ===== 工艺流程图 ===== */
+.flow-title {
+  text-align: center; font-size: 18pt; font-weight: bold;
+  color: #0000FF; margin: 6mm 0 10mm 0;
+}
+.flow { display: flex; flex-direction: column; align-items: center; }
+.flow .node {
+  width: 78mm; padding: 3mm 4mm;
+  border: 1.5pt solid #000; background: #eaf4ff;
+  text-align: center; font-size: 13pt; font-weight: bold;
+}
+.flow .arrow { font-size: 16pt; margin: 1mm 0; }
+.flow .note { margin-top: 6mm; font-size: 10pt; color: #555; }
+
+/* =========================================================
+   工序详情页（横向 A4）
+   ========================================================= */
+table.proc {
+  width: 100%; border-collapse: collapse;
+  font-size: 10.5pt; table-layout: fixed;
+}
+table.proc td {
+  border: 1pt solid #000; padding: 1.8mm 2.5mm;
+  vertical-align: top;
+}
+
+/* 表头行 */
+table.proc .title-cell {
+  font-family: "FangSong_GB2312", "仿宋", serif;
+  font-weight: bold; color: #339966;
+  font-size: 13pt; text-align: center;
+  vertical-align: middle; width: 14%;
+}
+table.proc .h-label {
+  background: #f3f3f3; font-weight: bold;
+  text-align: center; vertical-align: middle; height: 7mm;
+}
+table.proc .h-value {
+  text-align: center; vertical-align: middle; height: 7mm;
+}
+
+/* 操作说明 / 注意事项（左半） */
+table.proc .ops-cell { width: 42%; vertical-align: top; }
+table.proc .ops-cell.ops-main { height: 45mm; }
+table.proc .ops-cell.ops-note { height: 35mm; }
+table.proc .ops-cell .sec-title { font-weight: bold; margin-bottom: 1.5mm; }
+table.proc .ops-cell ol { margin: 0; padding-left: 5mm; }
+table.proc .ops-cell ol li { line-height: 1.7; margin-bottom: 0.5mm; }
+table.proc .ops-cell .notes p { margin: 0.5mm 0; line-height: 1.7; }
+
+/* 图片（右半） */
+table.proc .pic-cell {
+  text-align: center; vertical-align: middle;
+  background: #fff; padding: 2mm;
+}
+table.proc .pic-cell img {
+  max-width: 100%; max-height: 78mm; object-fit: contain;
+}
+table.proc .pic-cell.two-imgs .imgs {
+  display: flex; flex-direction: column;
+  gap: 1.5mm; align-items: center;
+}
+table.proc .pic-cell.two-imgs img { max-height: 38mm; }
+
+/* 工具设备 / 作业材料 — 子表格 */
+table.proc .mat-cell { padding: 0; }
+table.mat {
+  width: 100%; border-collapse: collapse;
+  font-size: 9.5pt; table-layout: fixed;
+}
+table.mat td {
+  border: 1pt solid #000; padding: 0.5mm 1.5mm;
+  height: 6mm; line-height: 1.2;
+  text-align: center; vertical-align: middle; overflow: hidden;
+}
+table.mat td.cat {
+  width: 7mm; background: #f3f3f3; font-weight: bold;
+  writing-mode: vertical-rl; text-orientation: upright;
+  letter-spacing: 2px; font-size: 10pt;
+}
+table.mat td.idx { width: 6mm; }
+table.mat td.txt { text-align: center; }
+
+/* 签字行 */
+table.sign {
+  width: 100%; border-collapse: collapse;
+  border-top: none; font-size: 10.5pt; margin-top: -1px;
+}
+table.sign td {
+  border: 1pt solid #000; padding: 1.5mm 2mm;
+  height: 8mm; text-align: center;
+}
+table.sign .label { background: #f3f3f3; font-weight: bold; width: 7%; }
+
+.sheet { page-break-inside: avoid; break-inside: avoid; }
+.star { color: #c00; font-weight: bold; }

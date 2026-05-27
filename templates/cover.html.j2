@@ -1,0 +1,27 @@
+<section class="page page-portrait cover">
+  <div class="company">{{ product.company }}</div>
+
+  <div class="model">{{ product.model }}</div>
+  <div class="doc-title">作 业 指 导 书</div>
+
+  <div class="doc-info">
+    <p>文件编号：{{ product.doc_id }}</p>
+    <p>版　　本：{{ product.version }}</p>
+  </div>
+
+  <div class="controlled">
+    受控状态：
+    <div class="controlled-box">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  </div>
+
+  <div class="signers">
+    <span>编制：____________</span>
+    <span>审核：____________</span>
+    <span>核准：____________</span>
+  </div>
+
+  <div class="dates">
+    <span>发布日期：{{ product.publish_date }}</span>
+    <span>实施日期：{{ product.effective_date }}</span>
+  </div>
+</section>

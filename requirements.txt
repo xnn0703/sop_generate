@@ -1,0 +1,6 @@
+jinja2>=3.1
+pyyaml>=6.0
+PySide6>=6.6
+# 仅打包/图标生成时需要：
+# pyinstaller>=6.0
+# pillow>=10.0

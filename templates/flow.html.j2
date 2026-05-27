@@ -1,0 +1,34 @@
+<section class="page page-portrait">
+  <table class="head">
+    <tr class="company-row"><td colspan="6">{{ product.company }}</td></tr>
+    <tr>
+      <td class="label">文件名称</td><td class="value">{{ product.model }}作业指导书</td>
+      <td class="label">文件编号</td><td class="value">{{ product.doc_id }}</td>
+      <td class="label">版　次</td><td class="value">{{ product.version }}</td>
+    </tr>
+    <tr>
+      <td class="label">编制</td><td class="value">&nbsp;</td>
+      <td class="label">审核</td><td class="value">&nbsp;</td>
+      <td class="label">核准</td><td class="value">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="label">发布日期</td><td class="value">{{ product.publish_date }}</td>
+      <td class="label">实行日期</td><td class="value">{{ product.effective_date }}</td>
+      <td class="label">页数</td><td class="value">1</td>
+    </tr>
+  </table>
+
+  <div class="flow-title">{{ product.model }} 工艺流程</div>
+
+  <div class="flow">
+    {%- for proc in processes %}
+    <div class="node">{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</div>
+    {%- if not loop.last %}
+    <div class="arrow">↓</div>
+    {%- endif %}
+    {%- endfor %}
+    {%- if processes | selectattr('key') | list %}
+    <div class="note">注：<span class="star">★</span> 为关键工序</div>
+    {%- endif %}
+  </div>
+</section>

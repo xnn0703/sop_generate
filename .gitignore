@@ -1,0 +1,39 @@
+# ===== Python =====
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# ===== 打包产物 =====
+build/
+dist/
+*.spec.bak
+
+# ===== 图标中间产物（保留源 svg / icns / ico）=====
+packaging/icon_pngs/
+
+# ===== 运行时输出 =====
+output/
+
+# ===== 系统/编辑器 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ===== Claude Code 本地配置 =====
+.claude/settings.local.json
+
+# ===== 文档老版（保留模板做参考，但不入库）=====
+*.docx
+*.zip
+*.fld/
+
+# ===== 大文件 / 临时 =====
+*.log
+.cache/

@@ -1,0 +1,77 @@
+# sop_generate · Windows 自动打包
+# ----------------------------------------------------------
+# 备用工作流：当代码被镜像/推送到 GitHub 时，自动在
+# windows-latest runner 上跑 PyInstaller，产出 sop_generate-win/。
+#
+# 当前主仓在 Gitee (https://gitee.com/soft-hertz/sop_generate)，
+# 本文件仅在你后续把仓库镜像到 GitHub 后才会生效。
+#
+# 使用方式：
+#   1) 把当前仓库镜像（或 fork）到 GitHub
+#   2) 在 GitHub 仓库页 → Actions 标签 → 启用工作流
+#   3) push 到 main 即触发；或在 Actions 页手动 run
+#   4) 构建完成在该次 run 的 "Artifacts" 区下载 sop_generate-win.zip
+name: build-windows
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r packaging/requirements-build.txt
+
+      - name: PyInstaller 打包
+        run: pyinstaller packaging/build.spec --clean --noconfirm
+
+      - name: 整理发布目录
+        shell: cmd
+        run: |
+          if exist dist\sop_generate-win rmdir /s /q dist\sop_generate-win
+          move dist\sop_generate dist\sop_generate-win
+          mkdir dist\sop_generate-win\output
+          xcopy /e /i /y products dist\sop_generate-win\products
+          xcopy /e /i /y assets\images dist\sop_generate-win\assets\images
+          (
+            echo sop_generate · 作业指导书生成器
+            echo ================================
+            echo.
+            echo 双击 sop_generate.exe 启动。
+            echo 首次运行 Defender 可能提示，点"更多信息" → "仍要运行"。
+            echo 导出 PDF 需本机已装 Edge 或 Chrome。
+            echo _internal\ 文件夹不可删除。
+          ) > dist\sop_generate-win\使用说明.txt
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: sop_generate-win
+          path: dist/sop_generate-win/
+          retention-days: 14
+
+      - name: 创建 Release（仅 tag 触发时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/sop_generate-win/* -DestinationPath dist/sop_generate-win.zip
+          gh release create ${{ github.ref_name }} dist/sop_generate-win.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

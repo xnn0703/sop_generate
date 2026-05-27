@@ -1,0 +1,41 @@
+<section class="page page-portrait">
+  <table class="head">
+    <tr class="company-row"><td colspan="6">{{ product.company }}</td></tr>
+    <tr>
+      <td class="label">文件名称</td><td class="value">目录</td>
+      <td class="label">文件编号</td><td class="value">{{ product.doc_id }}</td>
+      <td class="label">版　次</td><td class="value">{{ product.version }}</td>
+    </tr>
+    <tr>
+      <td class="label">编制</td><td class="value">&nbsp;</td>
+      <td class="label">审核</td><td class="value">&nbsp;</td>
+      <td class="label">核准</td><td class="value">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="label">发布日期</td><td class="value">{{ product.publish_date }}</td>
+      <td class="label">实行日期</td><td class="value">{{ product.effective_date }}</td>
+      <td class="label">页数</td><td class="value">1</td>
+    </tr>
+  </table>
+
+  <table class="toc">
+    <tr>
+      <th style="width:10%;">序号</th>
+      <th style="width:48%;">文件名称</th>
+      <th style="width:22%;">文件编号</th>
+      <th style="width:20%;">工序编号</th>
+    </tr>
+    {%- for proc in processes %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</td>
+      <td>{{ product.doc_id }}</td>
+      <td>{{ loop.index }}</td>
+    </tr>
+    {%- endfor %}
+  </table>
+
+  {%- if processes | selectattr('key') | list %}
+  <p style="margin-top:6mm; font-size:10pt;">注：<span class="star">★</span> 为关键工序</p>
+  {%- endif %}
+</section>

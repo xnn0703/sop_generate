@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{ product.model }} 作业指导书</title>
+<style>
+{% include 'style.css.j2' %}
+</style>
+</head>
+<body>
+
+{% include 'cover.html.j2' %}
+
+{% include 'toc.html.j2' %}
+
+{% include 'flow.html.j2' %}
+
+{%- for proc in processes %}
+{% with proc=proc, index=loop.index, total=processes|length %}
+{% include 'process.html.j2' %}
+{% endwith %}
+{%- endfor %}
+
+</body>
+</html>

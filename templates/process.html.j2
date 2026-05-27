@@ -1,0 +1,93 @@
+{#- 单个工序详情页（横向 A4）-#}
+{#- 输入：proc, product, index, total, image_base -#}
+<section class="page page-landscape">
+  <div class="sheet">
+  <table class="proc">
+    <colgroup>
+      <col style="width:14%"><col style="width:14%"><col style="width:14%">
+      <col style="width:18%"><col style="width:14%"><col style="width:6%">
+      <col style="width:8%"><col style="width:12%">
+    </colgroup>
+    <tr>
+      <td rowspan="2" class="title-cell">{{ product.model }}<br>作业指导书</td>
+      <td class="h-label">产品名称</td>
+      <td class="h-label">产品型号</td>
+      <td class="h-label">工　序</td>
+      <td class="h-label">文件编号</td>
+      <td class="h-label">版本</td>
+      <td class="h-label">页数</td>
+      <td class="h-label">制订时间</td>
+    </tr>
+    <tr>
+      <td class="h-value">{{ product.name }}</td>
+      <td class="h-value">{{ product.model }}</td>
+      <td class="h-value">{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</td>
+      <td class="h-value">{{ product.doc_id }}</td>
+      <td class="h-value">{{ product.version }}</td>
+      <td class="h-value">{{ index }} / {{ total }}</td>
+      <td class="h-value">{{ product.publish_date }}</td>
+    </tr>
+
+    <tr>
+      <td class="ops-cell ops-main" colspan="3">
+        <div class="sec-title">操作说明：</div>
+        <ol>
+          {%- for op in proc.operations %}
+          <li>{{ op }}</li>
+          {%- endfor %}
+        </ol>
+      </td>
+      <td class="pic-cell{% if proc.images | length > 1 %} two-imgs{% endif %}" colspan="5" rowspan="3">
+        {%- if proc.images | length > 1 %}
+        <div class="imgs">
+          {%- for img in proc.images %}
+          <img src="{{ image_base }}/{{ img }}" alt="{{ proc.name }}-{{ loop.index }}">
+          {%- endfor %}
+        </div>
+        {%- else %}
+        <img src="{{ image_base }}/{{ proc.images[0] }}" alt="{{ proc.name }}">
+        {%- endif %}
+      </td>
+    </tr>
+
+    <tr>
+      <td class="ops-cell ops-note" colspan="3">
+        <div class="sec-title">注意事项：</div>
+        <div class="notes">
+          {%- for note in proc.notes %}
+          <p>{{ loop.index | circled }} {{ note }}</p>
+          {%- endfor %}
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="mat-cell" colspan="3">
+        <table class="mat">
+          {%- set pad_tools = 4 - (proc.tools | length) %}
+          {%- set pad_mats  = 4 - (proc.materials | length) %}
+          {%- for i in range(4) %}
+          <tr>
+            {%- if loop.first %}<td class="cat" rowspan="4">工具设备</td>{%- endif %}
+            <td class="idx">{{ i + 1 }}</td>
+            <td class="txt">{{ proc.tools[i] if i < (proc.tools | length) else '' }}</td>
+            {%- if loop.first %}<td class="cat" rowspan="4">作业材料</td>{%- endif %}
+            <td class="idx">{{ i + 1 }}</td>
+            <td class="txt">{{ proc.materials[i] if i < (proc.materials | length) else '' }}</td>
+          </tr>
+          {%- endfor %}
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <table class="sign">
+    <tr>
+      <td class="label">编制</td><td>&nbsp;</td>
+      <td class="label">审核</td><td>&nbsp;</td>
+      <td class="label">核准</td><td>&nbsp;</td>
+      <td class="label">日期</td><td>{{ product.publish_date }}</td>
+    </tr>
+  </table>
+  </div>
+</section>
