@@ -22,6 +22,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
 
     steps:
       - name: 拉取代码
@@ -81,8 +83,6 @@ jobs:
       - name: 同步到 Gitee Release (latest)
         if: github.ref == 'refs/heads/main' && env.GITEE_TOKEN != ''
         shell: pwsh
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           $owner = 'soft-hertz'
           $repo  = 'sop_generate'
@@ -121,8 +121,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
-          GH_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
-          GITEE_TOKEN:  ${{ secrets.GITEE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = '${{ github.ref_name }}'
           # GitHub Release
