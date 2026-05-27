@@ -67,11 +67,79 @@ jobs:
           path: dist/sop_generate-win/
           retention-days: 14
 
-      - name: 创建 Release（仅 tag 触发时）
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: 打包 zip
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/sop_generate-win/* -DestinationPath dist/sop_generate-win.zip
-          gh release create ${{ github.ref_name }} dist/sop_generate-win.zip --generate-notes
+          Compress-Archive -Path dist\sop_generate-win\* -DestinationPath dist\sop_generate-win.zip -CompressionLevel Optimal
+          $size = (Get-Item dist\sop_generate-win.zip).Length
+          $mb = [math]::Round($size / 1MB, 1)
+          Write-Host "zip 大小: $mb MB"
+          if ($size -gt 100MB) {
+            Write-Host "::warning::zip 超过 100MB，Gitee Release 可能拒绝上传"
+          }
+
+      - name: 同步到 Gitee Release (latest)
+        if: github.ref == 'refs/heads/main' && env.GITEE_TOKEN != ''
+        shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $owner = 'soft-hertz'
+          $repo  = 'sop_generate'
+          $api   = "https://gitee.com/api/v5/repos/$owner/$repo"
+          $tok   = $env:GITEE_TOKEN
+
+          # 删除旧 latest release（如果存在）
+          try {
+            $existing = Invoke-RestMethod -Uri "$api/releases/tags/latest?access_token=$tok" -Method Get -ErrorAction Stop
+            Write-Host "删除旧 latest release id=$($existing.id)"
+            Invoke-RestMethod -Uri "$api/releases/$($existing.id)?access_token=$tok" -Method Delete | Out-Null
+          } catch {
+            Write-Host "无旧 latest release，跳过删除"
+          }
+
+          # 创建新 release
+          $sha = (git rev-parse --short HEAD).Trim()
+          $payload = @{
+            access_token     = $tok
+            tag_name         = 'latest'
+            target_commitish = 'main'
+            name             = "最新构建 ($sha)"
+            body             = "自动同步自 GitHub Actions main 分支构建。`n`ncommit: $sha`n`n双击 sop_generate.exe 启动；需装 Edge/Chrome 才能导出 PDF。"
+            prerelease       = $false
+          } | ConvertTo-Json -Depth 3
+          $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
+          Write-Host "新 release id=$($release.id) tag=$($release.tag_name)"
+
+          # 上传 zip
+          $form = @{ file = Get-Item dist\sop_generate-win.zip }
+          $result = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" -Method Post -Form $form
+          Write-Host "✓ 已挂载附件: $($result.name) ($([math]::Round($result.size/1MB,1)) MB)"
+          Write-Host "下载页：https://gitee.com/$owner/$repo/releases/tag/latest"
+
+      - name: 创建稳定版 Release（GitHub + Gitee，仅 v* tag 触发）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN:  ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          # GitHub Release
+          gh release create $tag dist\sop_generate-win.zip --generate-notes
+          # Gitee Release（如果配置了 token）
+          if ($env:GITEE_TOKEN) {
+            $owner = 'soft-hertz'; $repo = 'sop_generate'
+            $api = "https://gitee.com/api/v5/repos/$owner/$repo"
+            $payload = @{
+              access_token     = $env:GITEE_TOKEN
+              tag_name         = $tag
+              target_commitish = 'main'
+              name             = $tag
+              body             = "稳定版本 $tag。`n`n双击 sop_generate.exe 启动。"
+              prerelease       = $false
+            } | ConvertTo-Json
+            $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
+            Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$($env:GITEE_TOKEN)" -Method Post -Form @{ file = Get-Item dist\sop_generate-win.zip } | Out-Null
+            Write-Host "✓ Gitee Release $tag 已发布"
+          }
