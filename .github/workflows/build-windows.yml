@@ -105,17 +105,17 @@ jobs:
 
           # 创建新 release
           $sha = (git rev-parse --short HEAD).Trim()
-          $bodyText = @"
-自动构建 (commit $sha)。
-
-**下载说明：**
-1. 把下面所有 sop_generate-win-latest.7z.001 / .002 / .003 ... **全部**下载下来，放到同一文件夹
-2. 安装 7-Zip：https://www.7-zip.org/
-3. 选中 .001 文件 → 右键 → 7-Zip → 解压到当前位置
-4. 进入解压后的目录，双击 sop_generate.exe 启动
-
-> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Win10/11 自带 Edge，无需额外安装）。
-"@
+          $bodyText = @(
+            "自动构建 (commit $sha)。",
+            "",
+            "**下载说明：**",
+            "1. 把所有 sop_generate-win-latest.7z.001 / .002 / .003 ... 全部下载到同一文件夹",
+            "2. 安装 7-Zip：https://www.7-zip.org/",
+            "3. 选中 .001 文件 → 右键 → 7-Zip → 解压到当前位置",
+            "4. 进入解压后的目录，双击 sop_generate.exe 启动",
+            "",
+            "> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Win10/11 自带 Edge）。"
+          ) -join "`n"
           $payload = @{
             access_token     = $tok
             tag_name         = 'latest'
