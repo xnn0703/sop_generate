@@ -69,16 +69,21 @@ jobs:
           path: dist/sop_generate-win/
           retention-days: 14
 
-      - name: 打包 zip
+      - name: 7z 极限压缩 + 80MB 切片
         shell: pwsh
         run: |
-          Compress-Archive -Path dist\sop_generate-win\* -DestinationPath dist\sop_generate-win.zip -CompressionLevel Optimal
-          $size = (Get-Item dist\sop_generate-win.zip).Length
-          $mb = [math]::Round($size / 1MB, 1)
-          Write-Host "zip 大小: $mb MB"
-          if ($size -gt 100MB) {
-            Write-Host "::warning::zip 超过 100MB，Gitee Release 可能拒绝上传"
+          cd dist
+          # LZMA2 极限压缩，单卷 80MB（确保单文件 < Gitee 100MB 限制）
+          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mmt=on -v80m sop_generate-win-latest.7z sop_generate-win\ | Out-Null
+          $parts = Get-ChildItem sop_generate-win-latest.7z.*
+          Write-Host "分卷数：$($parts.Count)"
+          $total = 0
+          foreach ($p in $parts) {
+            $mb = [math]::Round($p.Length / 1MB, 1)
+            Write-Host "  $($p.Name): $mb MB"
+            $total += $p.Length
           }
+          Write-Host "压缩总大小：$([math]::Round($total / 1MB, 1)) MB"
 
       - name: 同步到 Gitee Release (latest)
         if: github.ref == 'refs/heads/main' && env.GITEE_TOKEN != ''
@@ -89,7 +94,7 @@ jobs:
           $api   = "https://gitee.com/api/v5/repos/$owner/$repo"
           $tok   = $env:GITEE_TOKEN
 
-          # 删除旧 latest release（如果存在）
+          # 删除旧 latest release
           try {
             $existing = Invoke-RestMethod -Uri "$api/releases/tags/latest?access_token=$tok" -Method Get -ErrorAction Stop
             Write-Host "删除旧 latest release id=$($existing.id)"
@@ -100,21 +105,43 @@ jobs:
 
           # 创建新 release
           $sha = (git rev-parse --short HEAD).Trim()
+          $bodyText = @"
+自动构建 (commit $sha)。
+
+**下载说明：**
+1. 把下面所有 sop_generate-win-latest.7z.001 / .002 / .003 ... **全部**下载下来，放到同一文件夹
+2. 安装 7-Zip：https://www.7-zip.org/
+3. 选中 .001 文件 → 右键 → 7-Zip → 解压到当前位置
+4. 进入解压后的目录，双击 sop_generate.exe 启动
+
+> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Win10/11 自带 Edge，无需额外安装）。
+"@
           $payload = @{
             access_token     = $tok
             tag_name         = 'latest'
             target_commitish = 'main'
             name             = "最新构建 ($sha)"
-            body             = "自动同步自 GitHub Actions main 分支构建。`n`ncommit: $sha`n`n双击 sop_generate.exe 启动；需装 Edge/Chrome 才能导出 PDF。"
+            body             = $bodyText
             prerelease       = $false
           } | ConvertTo-Json -Depth 3
           $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
-          Write-Host "新 release id=$($release.id) tag=$($release.tag_name)"
+          Write-Host "新 release id=$($release.id)"
 
-          # 上传 zip
-          $form = @{ file = Get-Item dist\sop_generate-win.zip }
-          $result = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" -Method Post -Form $form
-          Write-Host "✓ 已挂载附件: $($result.name) ($([math]::Round($result.size/1MB,1)) MB)"
+          # 按顺序上传所有分卷
+          $parts = Get-ChildItem dist\sop_generate-win-latest.7z.* | Sort-Object Name
+          foreach ($p in $parts) {
+            $mb = [math]::Round($p.Length / 1MB, 1)
+            Write-Host "上传 $($p.Name) ($mb MB)..."
+            try {
+              $r = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" `
+                                     -Method Post -Form @{ file = $p } -TimeoutSec 600
+              Write-Host "  ✓ $($r.name)"
+            } catch {
+              Write-Host "::error::上传 $($p.Name) 失败：$_"
+              throw
+            }
+          }
+          Write-Host "✓ 全部分卷已挂载到 Gitee Release"
           Write-Host "下载页：https://gitee.com/$owner/$repo/releases/tag/latest"
 
       - name: 创建稳定版 Release（GitHub + Gitee，仅 v* tag 触发）
@@ -124,21 +151,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = '${{ github.ref_name }}'
-          # GitHub Release
-          gh release create $tag dist\sop_generate-win.zip --generate-notes
+          $parts = Get-ChildItem dist\sop_generate-win-latest.7z.* | Sort-Object Name
+
+          # GitHub Release（一次性传所有分卷）
+          gh release create $tag ($parts.FullName) --generate-notes
+
           # Gitee Release（如果配置了 token）
           if ($env:GITEE_TOKEN) {
             $owner = 'soft-hertz'; $repo = 'sop_generate'
             $api = "https://gitee.com/api/v5/repos/$owner/$repo"
+            $body = "稳定版本 $tag。`n`n下载所有 .7z.NNN 分卷到同一文件夹，用 7-Zip 解压 .001 即可。`n双击 sop_generate.exe 启动。"
             $payload = @{
               access_token     = $env:GITEE_TOKEN
               tag_name         = $tag
               target_commitish = 'main'
               name             = $tag
-              body             = "稳定版本 $tag。`n`n双击 sop_generate.exe 启动。"
+              body             = $body
               prerelease       = $false
             } | ConvertTo-Json
             $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
-            Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$($env:GITEE_TOKEN)" -Method Post -Form @{ file = Get-Item dist\sop_generate-win.zip } | Out-Null
+            foreach ($p in $parts) {
+              Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$($env:GITEE_TOKEN)" `
+                                -Method Post -Form @{ file = $p } -TimeoutSec 600 | Out-Null
+              Write-Host "  ✓ $($p.Name)"
+            }
             Write-Host "✓ Gitee Release $tag 已发布"
           }
