@@ -19,6 +19,9 @@ on:
     tags:     ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write     # 允许 gh release create 调 GitHub Releases API
+
 jobs:
   build:
     runs-on: windows-latest
