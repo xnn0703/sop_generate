@@ -43,6 +43,23 @@ processes:
     materials:
       - 测试材料 C
 
+  - name: 测试工序 2.5（四图）
+    key: false
+    operations:
+      - 演示四图 2×2 网格布局
+      - 每张图自动缩放至格子大小
+    notes:
+      - 3-4 张图会自动 2×2 排列
+    images:
+      - step01.png
+      - step02.png
+      - step03.png
+      - step04.png
+    tools:
+      - 测试工具 X
+    materials:
+      - 测试材料 X
+
   - name: 测试工序三
     key: true
     operations:

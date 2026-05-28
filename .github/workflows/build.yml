@@ -1,16 +1,13 @@
-# sop_generate · 双平台自动打包（Windows + macOS）
+# sop_generate · 双平台并行打包（Windows + macOS）
 # ----------------------------------------------------------
-# 在 GitHub Actions 跑 Windows + macOS 双 runner，打 v* tag 时把分卷上传到独立
-# 公开 Gitee 发版仓库（owner/repo 通过 Secrets 注入，避免源码暴露业务信息）。
+# 三个 job：
+#   1. prepare-release（轻量 ubuntu）：tag 触发时创建 Gitee + GitHub Release，输出 release_id
+#   2. windows / macos（并行）：打包 → 7z 切片 → 上传分卷到已创建的 release
 #
 # 必需的 GitHub Secrets：
-#   - GITEE_TOKEN            : Gitee 私人令牌（projects scope）
-#   - RELEASE_GITEE_OWNER    : 发版用的公开 Gitee 仓库所有者
-#   - RELEASE_GITEE_REPO     : 发版用的公开 Gitee 仓库名
-#
-# 顺序：
-#   1. windows job：构建 + 7z 分卷 + 创建 Gitee/GitHub Release + 上传 win 分卷
-#   2. macos job（needs: windows）：构建 + 7z 分卷 + 追加 mac 分卷到同一 release
+#   - GITEE_TOKEN
+#   - RELEASE_GITEE_OWNER
+#   - RELEASE_GITEE_REPO
 name: build
 
 on:
@@ -24,14 +21,96 @@ permissions:
 
 jobs:
   # ===================================================================
-  # Windows 构建（先跑：创建 release 并上传 win 分卷）
+  # 准备 Release（仅 tag 触发；先创建空 release 拿到 id）
   # ===================================================================
-  windows:
-    runs-on: windows-latest
+  prepare-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      gitee_release_id: ${{ steps.gitee.outputs.release_id }}
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
       RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
       RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 创建 Gitee Release
+        id: gitee
+        shell: bash
+        run: |
+          set -e
+          OWNER="$RELEASE_GITEE_OWNER"
+          REPO="$RELEASE_GITEE_REPO"
+          TAG="${GITHUB_REF##*/}"
+          API="https://gitee.com/api/v5/repos/${OWNER}/${REPO}"
+
+          # 查发版仓库默认分支
+          DEFAULT_BRANCH=$(curl -s "${API}?access_token=${GITEE_TOKEN}" | python3 -c "import sys,json; print(json.load(sys.stdin)['default_branch'])")
+          echo "默认分支：$DEFAULT_BRANCH"
+
+          # 删除已存在的同名 release
+          EXISTING=$(curl -s "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or '')" 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "删除旧 $TAG release id=$EXISTING"
+            curl -s -X DELETE "${API}/releases/${EXISTING}?access_token=${GITEE_TOKEN}"
+          fi
+
+          # 创建新 release
+          SHA=$(git rev-parse --short HEAD)
+          BODY=$(cat <<EOF
+          稳定版本 **${TAG}** (commit ${SHA})。
+
+          **Windows 下载**：把 sop_generate-win-${TAG}.7z.001 / .002 ... 全部下载到同一文件夹，用 7-Zip 解压 .001。
+          **macOS 下载**：把 sop_generate-mac-${TAG}.7z.001 / .002 ... 全部下载到同一文件夹，用 Keka / 7-Zip 解压 .001。
+
+          **首次启动**：
+          - Windows: Defender 提示时点 "更多信息 → 仍要运行"
+          - macOS: 系统设置 → 隐私与安全性 → 放行 sop_generate.app
+          EOF
+          )
+          PAYLOAD=$(python3 -c "
+          import json
+          print(json.dumps({
+              'access_token': '${GITEE_TOKEN}',
+              'tag_name': '${TAG}',
+              'target_commitish': '${DEFAULT_BRANCH}',
+              'name': '${TAG}',
+              'body': '''$BODY''',
+              'prerelease': False
+          }))
+          ")
+          RESP=$(curl -s -X POST -H "Content-Type: application/json; charset=utf-8" \
+                  -d "$PAYLOAD" "${API}/releases")
+          RELEASE_ID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id') or '')")
+          if [ -z "$RELEASE_ID" ]; then
+            echo "::error::创建 Gitee Release 失败：$RESP"
+            exit 1
+          fi
+          echo "新 Gitee release id=$RELEASE_ID"
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: 创建 GitHub Release（空，后续 upload 追加分卷）
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          gh release create "$TAG" --generate-notes --title "$TAG"
+
+  # ===================================================================
+  # Windows 构建（并行）
+  # ===================================================================
+  windows:
+    runs-on: windows-latest
+    needs: [prepare-release]
+    if: ${{ !cancelled() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped') }}
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
+      RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
+      GITEE_RELEASE_ID: ${{ needs.prepare-release.outputs.gitee_release_id }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: 拉取代码
@@ -49,7 +128,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r packaging/requirements-build.txt
 
-      - name: 注入 release.config.json（从 Secrets 取实际 owner/repo）
+      - name: 注入 release.config.json
         if: env.RELEASE_GITEE_OWNER != '' && env.RELEASE_GITEE_REPO != ''
         shell: pwsh
         run: |
@@ -59,8 +138,6 @@ jobs:
             gitee_api   = "https://gitee.com/api/v5"
           } | ConvertTo-Json
           Set-Content -Path release.config.json -Value $cfg -Encoding UTF8
-          Write-Host "注入后 release.config.json："
-          Get-Content release.config.json
 
       - name: PyInstaller 打包
         run: pyinstaller packaging/build.spec --clean --noconfirm
@@ -76,12 +153,10 @@ jobs:
           (
             echo sop_generate · 作业指导书生成器
             echo ================================
-            echo.
             echo 双击 sop_generate.exe 启动。
             echo 首次运行 Defender 可能提示，点"更多信息" -^> "仍要运行"。
             echo 导出 PDF 需本机已装 Edge 或 Chrome。
             echo _internal\ 文件夹不可删除。
-            echo.
             echo 启动后会在后台检查更新，如有新版会弹窗提示。
           ) > dist\sop_generate-win\使用说明.txt
 
@@ -92,111 +167,67 @@ jobs:
           path: dist/sop_generate-win/
           retention-days: 14
 
-      - name: 7z 极限压缩 + 30MB 切片 (仅 tag 触发)
+      - name: 7z 极限压缩 + 30MB 切片（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'
           cd dist
           & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mmt=on -v30m "sop_generate-win-$tag.7z" sop_generate-win\ | Out-Null
-          $parts = Get-ChildItem "sop_generate-win-$tag.7z.*"
-          Write-Host "Windows 分卷数：$($parts.Count)"
-          foreach ($p in $parts) {
-            Write-Host ("  {0}: {1:N1} MB" -f $p.Name, ($p.Length / 1MB))
+          Get-ChildItem "sop_generate-win-$tag.7z.*" | ForEach-Object {
+            Write-Host ("  {0}: {1:N1} MB" -f $_.Name, ($_.Length / 1MB))
           }
 
-      - name: 创建 Gitee Release + 上传 Windows 分卷 (仅 tag 触发)
-        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != '' && env.RELEASE_GITEE_OWNER != ''
+      - name: 上传 Windows 分卷到 Gitee Release（仅 tag）
+        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
         shell: pwsh
         run: |
-          $owner = $env:RELEASE_GITEE_OWNER
-          $repo  = $env:RELEASE_GITEE_REPO
-          $api   = "https://gitee.com/api/v5/repos/$owner/$repo"
-          $tok   = $env:GITEE_TOKEN
-          $tag   = '${{ github.ref_name }}'
+          $api = "https://gitee.com/api/v5/repos/$env:RELEASE_GITEE_OWNER/$env:RELEASE_GITEE_REPO"
+          $rid = $env:GITEE_RELEASE_ID
+          $tok = $env:GITEE_TOKEN
+          $tag = '${{ github.ref_name }}'
 
-          # 查发版仓库默认分支（Gitee 默认是 master，不是 main）
-          $repoInfo = Invoke-RestMethod -Uri "$api`?access_token=$tok" -Method Get
-          $defaultBranch = $repoInfo.default_branch
-          Write-Host "发版仓库默认分支：$defaultBranch"
-
-          # 删除已存在的同名 release
-          try {
-            $existing = Invoke-RestMethod -Uri "$api/releases/tags/$tag`?access_token=$tok" -Method Get -ErrorAction Stop
-            Write-Host "删除旧 $tag release id=$($existing.id)"
-            Invoke-RestMethod -Uri "$api/releases/$($existing.id)?access_token=$tok" -Method Delete | Out-Null
-          } catch {
-            Write-Host "无旧 $tag release，跳过删除"
-          }
-
-          # 创建新 release
-          $sha = (git rev-parse --short HEAD).Trim()
-          $bodyText = @(
-            "稳定版本 **$tag** (commit $sha)。",
-            "",
-            "**Windows 下载**：把 sop_generate-win-$tag.7z.001 / .002 / .003 ... 全部下载到同一文件夹，用 7-Zip 解压 .001。",
-            "",
-            "**macOS 下载**：把 sop_generate-mac-$tag.7z.001 / .002 / .003 ... 全部下载到同一文件夹，用 7-Zip / Keka 解压 .001。",
-            "",
-            "**首次启动**：",
-            "- Windows：Defender 提示时点 ""更多信息 → 仍要运行""",
-            "- macOS：系统设置 → 隐私与安全性 → 放行 sop_generate.app",
-            "",
-            "> 导出 PDF 需本机已装 Edge / Chrome（macOS 也可装 Chromium）。"
-          ) -join "`n"
-          $payload = @{
-            access_token     = $tok
-            tag_name         = $tag
-            target_commitish = $defaultBranch
-            name             = $tag
-            body             = $bodyText
-            prerelease       = $false
-          } | ConvertTo-Json -Depth 3
-          $release = Invoke-RestMethod -Uri "$api/releases" -Method Post -Body $payload -ContentType 'application/json; charset=utf-8'
-          Write-Host "新 release id=$($release.id)"
-
-          # 上传 Windows 分卷
           $parts = Get-ChildItem "dist\sop_generate-win-$tag.7z.*" | Sort-Object Name
           foreach ($p in $parts) {
             $mb = [math]::Round($p.Length / 1MB, 1)
-            $maxRetry = 3
-            for ($i = 1; $i -le $maxRetry; $i++) {
-              Write-Host "上传 $($p.Name) ($mb MB)，尝试 $i/$maxRetry..."
+            for ($i = 1; $i -le 3; $i++) {
+              Write-Host "上传 $($p.Name) ($mb MB) 尝试 $i/3..."
               try {
-                $r = Invoke-RestMethod -Uri "$api/releases/$($release.id)/attach_files?access_token=$tok" `
+                $r = Invoke-RestMethod -Uri "$api/releases/$rid/attach_files?access_token=$tok" `
                                        -Method Post -Form @{ file = $p } -TimeoutSec 3600
                 Write-Host "  ✓ $($r.name)"
                 break
               } catch {
                 Write-Host "::warning::尝试 $i 失败：$_"
-                if ($i -eq $maxRetry) { throw }
+                if ($i -eq 3) { throw }
                 Start-Sleep -Seconds 10
               }
             }
           }
-          Write-Host ("✓ Windows 分卷已挂载。下载页：https://gitee.com/{0}/{1}/releases/tag/{2}" -f $owner, $repo, $tag)
+          Write-Host "✓ Windows 分卷已挂载到 Gitee Release"
 
-      - name: 创建 GitHub Release + 上传 Windows 分卷 (仅 tag 触发)
+      - name: 追加 Windows 分卷到 GitHub Release（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = '${{ github.ref_name }}'
           $parts = Get-ChildItem "dist\sop_generate-win-$tag.7z.*" | Sort-Object Name
-          gh release create $tag ($parts.FullName) --generate-notes
-          Write-Host "✓ GitHub Release $tag 已发布（含 Windows 分卷）"
+          gh release upload "$tag" ($parts.FullName) --clobber
+          Write-Host "✓ Windows 分卷已追加到 GitHub Release"
 
   # ===================================================================
-  # macOS 构建（在 windows job 之后跑，追加 mac 分卷到同一 release）
+  # macOS 构建（并行）
   # ===================================================================
   macos:
     runs-on: macos-latest
-    needs: windows
+    needs: [prepare-release]
+    if: ${{ !cancelled() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped') }}
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
       RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
       RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
+      GITEE_RELEASE_ID: ${{ needs.prepare-release.outputs.gitee_release_id }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: 拉取代码
@@ -227,7 +258,6 @@ jobs:
             "gitee_api": "https://gitee.com/api/v5"
           }
           EOF
-          cat release.config.json
 
       - name: PyInstaller 打包
         run: pyinstaller packaging/build.spec --clean --noconfirm
@@ -251,7 +281,6 @@ jobs:
           【导出 PDF】需装 Microsoft Edge 或 Google Chrome
           【自动更新】启动后台会检查更新，有新版弹窗提示
           TXT
-          ls -la "$RELEASE/"
 
       - name: 上传 GitHub Artifact
         uses: actions/upload-artifact@v4
@@ -260,31 +289,22 @@ jobs:
           path: dist/sop_generate-mac-*/
           retention-days: 14
 
-      - name: 7z 极限压缩 + 30MB 切片 (仅 tag 触发)
+      - name: 7z 极限压缩 + 30MB 切片（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           TAG="${GITHUB_REF##*/}"
           cd dist
-          # macOS 上 .app 的符号链接 / 资源 fork 需保留：用 7z 的默认即可
           7z a -t7z -mx=9 -mmt=on -v30m "sop_generate-mac-${TAG}.7z" "sop_generate-mac-${TAG}/" > /dev/null
           ls -lh "sop_generate-mac-${TAG}.7z."*
-          PARTS=$(ls "sop_generate-mac-${TAG}.7z."* | wc -l)
-          echo "macOS 分卷数：$PARTS"
 
-      - name: 追加 macOS 分卷到 Gitee Release (仅 tag 触发)
-        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != '' && env.RELEASE_GITEE_OWNER != ''
+      - name: 上传 macOS 分卷到 Gitee Release（仅 tag）
+        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
         run: |
           set -e
           TAG="${GITHUB_REF##*/}"
-          OWNER="$RELEASE_GITEE_OWNER"
-          REPO="$RELEASE_GITEE_REPO"
-          API="https://gitee.com/api/v5/repos/${OWNER}/${REPO}"
+          API="https://gitee.com/api/v5/repos/${RELEASE_GITEE_OWNER}/${RELEASE_GITEE_REPO}"
+          RID="${GITEE_RELEASE_ID}"
 
-          # 找 release id（windows job 已创建）
-          RELEASE_ID=$(curl -s -H "User-Agent: ci" "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-          echo "release id = $RELEASE_ID"
-
-          # 上传 mac 分卷
           for f in dist/sop_generate-mac-${TAG}.7z.*; do
             NAME=$(basename "$f")
             SIZE_MB=$(du -m "$f" | cut -f1)
@@ -292,7 +312,7 @@ jobs:
               echo "上传 $NAME (${SIZE_MB} MB) 尝试 $i/3..."
               HTTP=$(curl -s -o /tmp/upload_resp.json -w "%{http_code}" \
                 --max-time 3600 \
-                -X POST "${API}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
+                -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
                 -F "file=@${f}")
               if [ "$HTTP" = "201" ] || [ "$HTTP" = "200" ]; then
                 echo "  ✓ $NAME"
@@ -304,13 +324,10 @@ jobs:
             done
           done
           echo "✓ macOS 分卷已挂载到 Gitee Release"
-          echo "下载页：https://gitee.com/${OWNER}/${REPO}/releases/tag/${TAG}"
 
-      - name: 追加 macOS 分卷到 GitHub Release (仅 tag 触发)
+      - name: 追加 macOS 分卷到 GitHub Release（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF##*/}"
-          gh release upload "$TAG" dist/sop_generate-mac-${TAG}.7z.*
+          gh release upload "$TAG" dist/sop_generate-mac-${TAG}.7z.* --clobber
           echo "✓ macOS 分卷已追加到 GitHub Release"

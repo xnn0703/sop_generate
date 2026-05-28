@@ -169,15 +169,39 @@ table.proc .ops-cell .notes p { margin: 1mm 0; line-height: 1.9; font-size: 13pt
 table.proc .pic-cell {
   text-align: center; vertical-align: middle;
   background: #fff; padding: 3mm;
+  height: 188mm;
 }
 table.proc .pic-cell img {
-  max-width: 100%; max-height: 188mm; object-fit: contain;
+  max-width: 100%; object-fit: contain;
 }
-table.proc .pic-cell.two-imgs .imgs {
+/* 1 张：单图填满 */
+table.proc .pic-cell.imgs-1 img { max-height: 188mm; }
+
+/* 2 张：上下两张 */
+table.proc .pic-cell.imgs-2 .imgs {
   display: flex; flex-direction: column;
   gap: 2mm; align-items: center;
+  height: 100%;
 }
-table.proc .pic-cell.two-imgs img { max-height: 92mm; }
+table.proc .pic-cell.imgs-2 img { max-height: 92mm; }
+
+/* 3-4 张：2×2 网格，每张自动缩放至格子大小 */
+table.proc .pic-cell.imgs-3 .imgs,
+table.proc .pic-cell.imgs-4 .imgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2mm;
+  height: 100%;
+  align-items: center;
+  justify-items: center;
+}
+table.proc .pic-cell.imgs-3 img,
+table.proc .pic-cell.imgs-4 img {
+  max-width: 100%; max-height: 92mm;
+  width: auto; height: auto;
+}
+
 table.proc .pic-cell .cont-overlay {
   color: #888; font-size: 14pt; padding: 30mm 0;
 }
