@@ -7,20 +7,17 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPlainTextEdit, QVBoxLayout, QWidget,
 )
 
-from core.validator import _cn_len
-
-
 class ListEditor(QWidget):
-    """每行一项的列表编辑器。超长/超数量在标签上红字提示。"""
+    """每行一项的列表编辑器。仅在数量超限时红字提示；单条长度交给 CSS 自动裁切。"""
 
     changed = Signal()
 
-    def __init__(self, title: str, max_items: int, max_len_cn: int,
+    def __init__(self, title: str, max_items: int,
+                 max_len_cn: int | None = None,   # 保留参数以兼容现有调用，不再使用
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.title = title
         self.max_items = max_items
-        self.max_len_cn = max_len_cn
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -37,7 +34,7 @@ class ListEditor(QWidget):
 
         self.edit = QPlainTextEdit()
         self.edit.setWordWrapMode(QTextOption.WordWrap)
-        self.edit.setPlaceholderText(f"每行一项，最多 {max_items} 项，单项 ≤ {max_len_cn} 汉字")
+        self.edit.setPlaceholderText(f"每行一项，最多 {max_items} 项")
         self.edit.textChanged.connect(self._on_changed)
         layout.addWidget(self.edit)
 
@@ -59,22 +56,11 @@ class ListEditor(QWidget):
         self.changed.emit()
 
     def _refresh_status(self) -> None:
-        items = self.items()
-        n = len(items)
-        bad: list[str] = []
-        if n > self.max_items:
-            bad.append(f"{n}/{self.max_items} 项 超")
-        else:
-            bad.append(f"{n}/{self.max_items} 项")
-        long_items = [i for i, it in enumerate(items, start=1) if _cn_len(it) > self.max_len_cn]
-        if long_items:
-            bad.append(f"第 {','.join(map(str, long_items))} 项超长")
-
-        msg = "  ".join(bad)
-        is_error = (n > self.max_items) or bool(long_items)
+        n = len(self.items())
+        is_error = n > self.max_items
         color = "#c00" if is_error else "#888"
         self.status.setStyleSheet(f"color: {color}; font-size: 11px;")
-        self.status.setText(msg)
+        self.status.setText(f"{n}/{self.max_items} 项" + ("  超" if is_error else ""))
 
 
 class ImageListEditor(QWidget):

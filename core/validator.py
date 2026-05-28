@@ -12,10 +12,7 @@ from typing import Any
 
 
 # =============== 字段约束 ===============
-MAX_PROC_NAME_CN     = 12   # 工序名 最长汉字数
-MAX_OP_CN            = 30   # 单条操作说明 最长汉字数
-MAX_NOTE_CN          = 28   # 单条注意事项 最长汉字数
-MAX_TOOL_CN          = 10   # 工具/材料 单项最长汉字数
+# 长度类不再硬限：单元格 overflow:hidden 自动裁切；只校验"数量"类硬约束。
 OPS_PER_PAGE         = 6    # 单页能放下的操作说明 条数（超过自动拆页）
 MAX_OPS              = 18   # 操作说明 条数上限（最多拆 3 页）
 MAX_NOTES            = 4    # 注意事项 条数上限（超过请拆工序）
@@ -24,7 +21,7 @@ MAX_MATS             = 4    # 作业材料 项数上限
 MAX_IMAGES           = 2    # 图片张数上限（多图建议拆工序）
 MIN_IMAGES           = 1    # 图片张数下限
 MAX_PROCESSES        = 32   # 工序总数上限（流程图会自动分页）
-PROCESSES_PER_FLOW_PAGE = 10  # 工艺流程图单页最多节点数
+PROCESSES_PER_FLOW_PAGE = 15  # 工艺流程图单页最多节点数（A3 纵向可放下）
 
 DATE_RE    = re.compile(r"^\d{4}-\d{1,2}-\d{1,2}$")
 VERSION_RE = re.compile(r"^[A-Z]/\d+$")
@@ -88,10 +85,6 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
     if model and not MODEL_RE.match(model):
         errors.append(f"product.model 只能含字母数字/下划线/横线，得到 {model!r}")
 
-    name = product.get("name", "")
-    if name and _cn_len(name) > MAX_PROC_NAME_CN:
-        warnings.append(f"product.name 偏长（{_cn_len(name)} > {MAX_PROC_NAME_CN}）")
-
     for k in ("publish_date", "effective_date"):
         v = product.get(k, "")
         if v and not DATE_RE.match(str(v)):
@@ -124,8 +117,6 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
         pname = proc.get("name", "")
         if not pname:
             errors.append(f"{prefix}.name 缺失")
-        elif _cn_len(pname) > MAX_PROC_NAME_CN:
-            errors.append(f"{prefix}.name 长度 {_cn_len(pname)} 超过上限 {MAX_PROC_NAME_CN}")
 
         ops = proc.get("operations") or []
         if not ops:
@@ -135,24 +126,15 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
         elif len(ops) > OPS_PER_PAGE:
             n_pages = (len(ops) + OPS_PER_PAGE - 1) // OPS_PER_PAGE
             warnings.append(f"{prefix}.operations 条数 {len(ops)} 超过单页容量 {OPS_PER_PAGE}，将自动拆成 {n_pages} 页")
-        for j, op in enumerate(ops, start=1):
-            if _cn_len(op) > MAX_OP_CN:
-                warnings.append(f"{prefix}.operations[{j}] 偏长（{_cn_len(op)} > {MAX_OP_CN}）")
 
         notes = proc.get("notes") or []
         if len(notes) > MAX_NOTES:
             errors.append(f"{prefix}.notes 条数 {len(notes)} 超过上限 {MAX_NOTES}")
-        for j, note in enumerate(notes, start=1):
-            if _cn_len(note) > MAX_NOTE_CN:
-                warnings.append(f"{prefix}.notes[{j}] 偏长（{_cn_len(note)} > {MAX_NOTE_CN}）")
 
         for key, limit in (("tools", MAX_TOOLS), ("materials", MAX_MATS)):
             items = proc.get(key) or []
             if len(items) > limit:
                 errors.append(f"{prefix}.{key} 项数 {len(items)} 超过上限 {limit}")
-            for j, it in enumerate(items, start=1):
-                if _cn_len(it) > MAX_TOOL_CN:
-                    warnings.append(f"{prefix}.{key}[{j}] 偏长（{_cn_len(it)} > {MAX_TOOL_CN}）")
 
         images = proc.get("images") or []
         if len(images) > MAX_IMAGES:

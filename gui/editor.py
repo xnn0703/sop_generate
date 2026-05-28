@@ -39,28 +39,28 @@ class ProcessEditor(QWidget):
         head_layout = QFormLayout(head)
         self.name_edit = QLineEdit()
         self.name_edit.textChanged.connect(self._mark_changed)
-        head_layout.addRow("工序名（≤12 汉字）", self.name_edit)
+        head_layout.addRow("工序名", self.name_edit)
         self.key_check = QCheckBox("关键工序（★）")
         self.key_check.toggled.connect(self._mark_changed)
         head_layout.addRow("", self.key_check)
         v.addWidget(head)
 
         # 操作说明（超过 6 条自动拆页，最多 18 条）
-        self.ops_editor = ListEditor("操作说明（>6 条会自动拆页，建议拆成多工序更清晰）",
-                                     max_items=18, max_len_cn=30)
+        self.ops_editor = ListEditor(
+            "操作说明（>6 条会自动拆页，建议拆成多工序更清晰）", max_items=18)
         self.ops_editor.changed.connect(self._mark_changed)
         v.addWidget(self.ops_editor)
 
         # 注意事项
-        self.notes_editor = ListEditor("注意事项", max_items=4, max_len_cn=28)
+        self.notes_editor = ListEditor("注意事项", max_items=4)
         self.notes_editor.changed.connect(self._mark_changed)
         v.addWidget(self.notes_editor)
 
         # 工具 + 材料
         tm = QHBoxLayout()
-        self.tools_editor = ListEditor("工具设备", max_items=4, max_len_cn=10)
+        self.tools_editor = ListEditor("工具设备", max_items=4)
         self.tools_editor.changed.connect(self._mark_changed)
-        self.mats_editor = ListEditor("作业材料", max_items=4, max_len_cn=10)
+        self.mats_editor = ListEditor("作业材料", max_items=4)
         self.mats_editor.changed.connect(self._mark_changed)
         tm.addWidget(self.tools_editor)
         tm.addWidget(self.mats_editor)

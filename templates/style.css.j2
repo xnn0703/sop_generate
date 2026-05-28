@@ -1,6 +1,6 @@
-/* ===== 打印分页：纵向 / 横向命名页 ===== */
-@page portrait  { size: A4 portrait;  margin: 18mm 16mm; }
-@page landscape { size: A4 landscape; margin: 12mm 14mm; }
+/* ===== 打印分页：纵向 / 横向命名页（A3）===== */
+@page portrait  { size: A3 portrait;  margin: 20mm 18mm; }
+@page landscape { size: A3 landscape; margin: 14mm 16mm; }
 .page-portrait  { page: portrait; }
 .page-landscape { page: landscape; }
 
@@ -10,7 +10,7 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: "FangSong", "仿宋", "FangSong_GB2312", "SimSun", "宋体", serif;
-  font-size: 11pt;
+  font-size: 13pt;
   color: #000;
   background: #e8e8e8;
 }
@@ -27,8 +27,8 @@ html, body {
   overflow: hidden;
   position: relative;
 }
-.page-portrait  { width: 210mm; height: 297mm; padding: 18mm 16mm; }
-.page-landscape { width: 297mm; height: 210mm; padding: 10mm 12mm; }
+.page-portrait  { width: 297mm; height: 420mm; padding: 20mm 18mm; }
+.page-landscape { width: 420mm; height: 297mm; padding: 14mm 16mm; }
 .page:last-child { page-break-after: auto; break-after: auto; }
 
 @media print {
@@ -40,45 +40,45 @@ html, body {
 table, tr, td { page-break-inside: avoid; break-inside: avoid; }
 
 /* ===== 封面 ===== */
-.cover { text-align: center; padding-top: 25mm; }
+.cover { text-align: center; padding-top: 35mm; }
 .cover .company {
   font-family: "FangSong_GB2312", "仿宋", serif;
-  font-size: 28pt; font-weight: bold; color: #339966;
-  margin-bottom: 35mm; letter-spacing: 4px;
+  font-size: 40pt; font-weight: bold; color: #339966;
+  margin-bottom: 50mm; letter-spacing: 6px;
 }
 .cover .model {
-  font-size: 48pt; font-weight: bold; color: #0000FF;
-  letter-spacing: 6px; line-height: 1.4;
+  font-size: 64pt; font-weight: bold; color: #0000FF;
+  letter-spacing: 8px; line-height: 1.4;
 }
 .cover .doc-title {
-  font-size: 48pt; font-weight: bold; color: #0000FF;
-  letter-spacing: 12px; margin-bottom: 30mm;
+  font-size: 64pt; font-weight: bold; color: #0000FF;
+  letter-spacing: 16px; margin-bottom: 40mm;
 }
-.cover .doc-info { font-size: 14pt; line-height: 2.4; margin-top: 10mm; }
-.cover .controlled { margin-top: 14mm; font-size: 14pt; }
+.cover .doc-info { font-size: 18pt; line-height: 2.4; margin-top: 14mm; }
+.cover .controlled { margin-top: 20mm; font-size: 18pt; }
 .cover .controlled-box {
   display: inline-block; border: 1.5pt solid #000;
-  padding: 4mm 18mm; margin-top: 4mm;
+  padding: 5mm 24mm; margin-top: 5mm;
 }
 .cover .signers, .cover .dates {
-  margin-top: 18mm; font-size: 13pt;
+  margin-top: 22mm; font-size: 16pt;
   display: flex; justify-content: space-around;
 }
-.cover .dates { margin-top: 10mm; }
+.cover .dates { margin-top: 14mm; }
 
 /* ===== 公司表头（纵向页用） ===== */
 table.head {
   width: 100%; border-collapse: collapse;
-  margin-bottom: 4mm; font-size: 11pt;
+  margin-bottom: 6mm; font-size: 13pt;
 }
 table.head td {
   border: 1pt solid #000; text-align: center;
-  padding: 1.5mm 2mm; height: 8mm;
+  padding: 2mm 3mm; height: 11mm;
 }
 table.head .company-row td {
   font-family: "FangSong_GB2312", "仿宋", serif;
-  font-size: 16pt; font-weight: bold;
-  color: #339966; height: 12mm;
+  font-size: 20pt; font-weight: bold;
+  color: #339966; height: 16mm;
 }
 table.head .label { background: #f3f3f3; font-weight: bold; width: 12%; }
 table.head .value { width: 21%; }
@@ -86,41 +86,52 @@ table.head .value { width: 21%; }
 /* ===== 目录表 ===== */
 table.toc {
   width: 100%; border-collapse: collapse;
-  margin-top: 4mm; font-size: 11.5pt;
+  margin-top: 6mm; font-size: 14pt;
 }
 table.toc th, table.toc td {
-  border: 1pt solid #000; padding: 2.5mm 2mm;
-  text-align: center; height: 9mm;
+  border: 1pt solid #000; padding: 3.5mm 3mm;
+  text-align: center; height: 12mm;
 }
 table.toc th { background: #f3f3f3; font-weight: bold; }
 
 /* ===== 工艺流程图 ===== */
 .flow-title {
-  text-align: center; font-size: 18pt; font-weight: bold;
-  color: #0000FF; margin: 6mm 0 10mm 0;
+  text-align: center; font-size: 24pt; font-weight: bold;
+  color: #0000FF; margin: 10mm 0 14mm 0;
 }
 .flow { display: flex; flex-direction: column; align-items: center; }
 .flow .node {
-  width: 78mm; padding: 3mm 4mm;
+  width: 110mm; padding: 5mm 6mm;
   border: 1.5pt solid #000; background: #eaf4ff;
-  text-align: center; font-size: 13pt; font-weight: bold;
+  text-align: center; font-size: 16pt; font-weight: bold;
 }
-.flow .arrow { font-size: 16pt; margin: 1mm 0; }
-.flow .note { margin-top: 6mm; font-size: 10pt; color: #555; }
+.flow .arrow { font-size: 20pt; margin: 2mm 0; }
+.flow .note { margin-top: 10mm; font-size: 13pt; color: #555; }
 .flow .cont-mark {
-  font-size: 11pt; color: #888; font-weight: bold;
-  margin: 1mm 0; letter-spacing: 2px;
+  font-size: 14pt; color: #888; font-weight: bold;
+  margin: 2mm 0; letter-spacing: 2px;
 }
 
 /* =========================================================
-   工序详情页（横向 A4）
+   工序详情页（横向 A3，表格铺满）
    ========================================================= */
+.sheet {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 table.proc {
-  width: 100%; border-collapse: collapse;
-  font-size: 10.5pt; table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13pt;
+  table-layout: fixed;
+  flex: 1;
 }
 table.proc td {
-  border: 1pt solid #000; padding: 1.8mm 2.5mm;
+  border: 1pt solid #000;
+  padding: 3mm 4mm;
   vertical-align: top;
 }
 
@@ -128,72 +139,75 @@ table.proc td {
 table.proc .title-cell {
   font-family: "FangSong_GB2312", "仿宋", serif;
   font-weight: bold; color: #339966;
-  font-size: 13pt; text-align: center;
+  font-size: 18pt; text-align: center;
   vertical-align: middle; width: 14%;
 }
 table.proc .h-label {
   background: #f3f3f3; font-weight: bold;
-  text-align: center; vertical-align: middle; height: 7mm;
+  text-align: center; vertical-align: middle; height: 10mm;
+  font-size: 12pt;
 }
 table.proc .h-value {
-  text-align: center; vertical-align: middle; height: 7mm;
+  text-align: center; vertical-align: middle; height: 10mm;
+  font-size: 12pt;
 }
 
 /* 操作说明 / 注意事项（左半） */
-table.proc .ops-cell { width: 42%; vertical-align: top; }
-table.proc .ops-cell.ops-main { height: 45mm; }
-table.proc .ops-cell.ops-note { height: 35mm; }
-table.proc .ops-cell .sec-title { font-weight: bold; margin-bottom: 1.5mm; }
-table.proc .ops-cell ol { margin: 0; padding-left: 5mm; }
-table.proc .ops-cell ol li { line-height: 1.7; margin-bottom: 0.5mm; }
-table.proc .ops-cell .notes p { margin: 0.5mm 0; line-height: 1.7; }
+table.proc .ops-cell { width: 42%; vertical-align: top; overflow: hidden; }
+table.proc .ops-cell.ops-main { height: 110mm; }
+table.proc .ops-cell.ops-note { height: 75mm; }
+table.proc .ops-cell .sec-title {
+  font-weight: bold; margin-bottom: 3mm; font-size: 14pt;
+}
+table.proc .ops-cell ol { margin: 0; padding-left: 7mm; }
+table.proc .ops-cell ol li { line-height: 1.9; margin-bottom: 1mm; font-size: 13pt; }
+table.proc .ops-cell .notes p { margin: 1mm 0; line-height: 1.9; font-size: 13pt; }
 
 /* 图片（右半） */
 table.proc .pic-cell {
   text-align: center; vertical-align: middle;
-  background: #fff; padding: 2mm;
+  background: #fff; padding: 3mm;
 }
 table.proc .pic-cell img {
-  max-width: 100%; max-height: 78mm; object-fit: contain;
+  max-width: 100%; max-height: 188mm; object-fit: contain;
 }
 table.proc .pic-cell.two-imgs .imgs {
   display: flex; flex-direction: column;
-  gap: 1.5mm; align-items: center;
+  gap: 2mm; align-items: center;
 }
-table.proc .pic-cell.two-imgs img { max-height: 38mm; }
+table.proc .pic-cell.two-imgs img { max-height: 92mm; }
 table.proc .pic-cell .cont-overlay {
-  color: #888; font-size: 12pt; padding: 20mm 0;
+  color: #888; font-size: 14pt; padding: 30mm 0;
 }
 
 /* 工具设备 / 作业材料 — 子表格 */
 table.proc .mat-cell { padding: 0; }
 table.mat {
   width: 100%; border-collapse: collapse;
-  font-size: 9.5pt; table-layout: fixed;
+  font-size: 11.5pt; table-layout: fixed;
 }
 table.mat td {
-  border: 1pt solid #000; padding: 0.5mm 1.5mm;
-  height: 6mm; line-height: 1.2;
+  border: 1pt solid #000; padding: 1.5mm 2.5mm;
+  height: 10mm; line-height: 1.3;
   text-align: center; vertical-align: middle; overflow: hidden;
 }
 table.mat td.cat {
-  width: 7mm; background: #f3f3f3; font-weight: bold;
+  width: 10mm; background: #f3f3f3; font-weight: bold;
   writing-mode: vertical-rl; text-orientation: upright;
-  letter-spacing: 2px; font-size: 10pt;
+  letter-spacing: 3px; font-size: 13pt;
 }
-table.mat td.idx { width: 6mm; }
+table.mat td.idx { width: 8mm; }
 table.mat td.txt { text-align: center; }
 
 /* 签字行 */
 table.sign {
   width: 100%; border-collapse: collapse;
-  border-top: none; font-size: 10.5pt; margin-top: -1px;
+  border-top: none; font-size: 12pt; margin-top: -1px;
 }
 table.sign td {
-  border: 1pt solid #000; padding: 1.5mm 2mm;
-  height: 8mm; text-align: center;
+  border: 1pt solid #000; padding: 2.5mm 3mm;
+  height: 13mm; text-align: center;
 }
 table.sign .label { background: #f3f3f3; font-weight: bold; width: 7%; }
 
-.sheet { page-break-inside: avoid; break-inside: avoid; }
 .star { color: #c00; font-weight: bold; }
