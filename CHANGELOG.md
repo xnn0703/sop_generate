@@ -4,6 +4,18 @@
 
 ---
 
+## v1.0.1 — 2026-05-28
+
+- 新增**自动更新**机制（独立 updater 子程序 + Gitee Release 增量分发）
+- 双 EXE 打包（PyInstaller MERGE 共享运行时，增量体积仅 14MB）
+- 启动时后台检查更新，弹窗"立即更新 / 暂不 / 跳过此版本"
+- 升级时自动保留 `products/` / `assets/` / `output/` 用户数据
+- 改用独立公开 Gitee 仓库 `sop_generate-releases` 分发，主仓可保持私有
+- 通过 `release.config.json` 配置发版仓库地址，CI 自动从 Secrets 注入
+- 移除所有业务信息硬编码（公司名、产品代号等改为占位）
+
+---
+
 ## v1.0.0 — 2026-05-28
 
 首发版本。
