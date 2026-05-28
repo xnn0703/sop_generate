@@ -173,7 +173,8 @@ jobs:
         run: |
           $tag = '${{ github.ref_name }}'
           cd dist
-          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mmt=on -v30m "sop_generate-win-$tag.7z" sop_generate-win\ | Out-Null
+          # -mf=off 禁用 BCJ2 等执行过滤器，确保客户端 py7zr 能解压
+          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mf=off -mmt=on -v30m "sop_generate-win-$tag.7z" sop_generate-win\ | Out-Null
           Get-ChildItem "sop_generate-win-$tag.7z.*" | ForEach-Object {
             Write-Host ("  {0}: {1:N1} MB" -f $_.Name, ($_.Length / 1MB))
           }
@@ -294,7 +295,8 @@ jobs:
         run: |
           TAG="${GITHUB_REF##*/}"
           cd dist
-          7z a -t7z -mx=9 -mmt=on -v30m "sop_generate-mac-${TAG}.7z" "sop_generate-mac-${TAG}/" > /dev/null
+          # -mf=off 禁用 BCJ2 等执行过滤器，确保客户端 py7zr 能解压
+          7z a -t7z -mx=9 -mf=off -mmt=on -v30m "sop_generate-mac-${TAG}.7z" "sop_generate-mac-${TAG}/" > /dev/null
           ls -lh "sop_generate-mac-${TAG}.7z."*
 
       - name: 上传 macOS 分卷到 Gitee Release（仅 tag）

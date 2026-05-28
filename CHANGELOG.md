@@ -4,6 +4,16 @@
 
 ---
 
+## v1.0.4 — 2026-05-29
+
+**修复关键 Bug**：自动更新解压失败 `UnsupportedCompressionMethodError: BCJ2 filter is not supported by py7zr`
+
+- 7-Zip `-mx=9` 极限压缩对 x86 可执行文件默认启用 BCJ2 滤镜（提升压缩率），但客户端 py7zr 1.1.x 不支持解 BCJ2
+- CI 加 `-mf=off` 禁用执行过滤器：体积增加约 5-10%，换来 py7zr 兼容
+- v1.0.2 / v1.0.3 客户端从这版起可以正常自动更新
+
+---
+
 ## v1.0.3 — 2026-05-29
 
 - **多图布局扩展**：图片上限 2 → **4** 张
