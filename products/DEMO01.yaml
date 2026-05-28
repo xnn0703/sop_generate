@@ -1,0 +1,120 @@
+# DEMO01 · 模板示例产品（纯测试数据，无业务信息）
+# 字段说明见 products/_schema.yaml
+
+product:
+  model: DEMO01
+  name: 演示产品
+  company: 南京软赫电子科技有限公司
+  doc_id: SH-ZY-DEMO
+  version: A/0
+  publish_date: 2026-1-1
+  effective_date: 2026-1-15
+
+processes:
+  - name: 测试工序一
+    key: false
+    operations:
+      - 第一步：示例操作步骤一
+      - 第二步：示例操作步骤二
+    notes:
+      - 示例注意事项一
+      - 示例注意事项二
+    images:
+      - step01.png
+    tools:
+      - 测试工具 A
+      - 测试工具 B
+    materials:
+      - 测试材料 A
+      - 测试材料 B
+
+  - name: 测试工序二（双图）
+    key: false
+    operations:
+      - 演示双图布局
+      - 双图自动上下排列
+    notes:
+      - 双图模式下两张图各占一半区域
+    images:
+      - step02.png
+      - step03.png
+    tools:
+      - 测试工具 C
+    materials:
+      - 测试材料 C
+
+  - name: 测试工序三
+    key: true
+    operations:
+      - 演示关键工序（★ 标记）
+      - 关键工序会在封面、目录、流程图加红色 ★
+    notes:
+      - 关键工序需特别注意
+    images:
+      - step04.png
+    tools:
+      - 测试工具 D
+    materials:
+      - 测试材料 D
+
+  - name: 测试工序四
+    key: false
+    operations:
+      - 普通工序示例
+    notes:
+      - 注意事项可空
+    images:
+      - step05.png
+    tools:
+      - 测试工具 E
+    materials:
+      - 测试材料 E
+
+  - name: 测试工序五
+    key: false
+    operations:
+      - 演示工序五
+    notes: []
+    images:
+      - step06.png
+    tools:
+      - 测试工具 F
+    materials:
+      - 测试材料 F
+
+  - name: 测试工序六
+    key: false
+    operations:
+      - 演示工序六
+    notes: []
+    images:
+      - step07.png
+    tools:
+      - 测试工具 G
+    materials:
+      - 测试材料 G
+
+  - name: 测试工序七
+    key: true
+    operations:
+      - 第二个关键工序
+    notes:
+      - 关键工序需特别注意
+    images:
+      - step08.png
+    tools:
+      - 测试工具 H
+    materials:
+      - 测试材料 H
+
+  - name: 测试工序八
+    key: false
+    operations:
+      - 收尾工序示例
+    notes: []
+    images:
+      - step09.png
+    tools:
+      - 测试工具 I
+    materials:
+      - 测试材料 I

@@ -1,7 +1,10 @@
-# 宏图作业指导书生成器 · 开发计划
+# sop_generate · 开发计划（历史档案）
 
 > 目标：把当前手写 HTML 抽象为可复用、可批量生成、并能给非技术人员使用的工具。
 > 决策依据：使用者含工艺员/班长（需 GUI）；PDF 同时支持自动（Edge headless）和手动两种方式。
+>
+> **注**：本文档为 M1 阶段初版规划存档。下文示例中的"射频终端 / 安装硅胶O型圈"等是历史叙述上下文，
+> 实际项目代码与文档已替换为通用测试数据（DEMO01）。最新设计请看 README.md 和 _schema.yaml。
 
 ---
 
@@ -64,16 +67,16 @@
 │   ├── flow.html.j2                # 工艺流程图分片
 │   └── process.html.j2             # 单个工序页分片
 ├── products/
-│   ├── XESA01.yaml                 # 第一个产品（从现有内容迁移）
+│   ├── DEMO01.yaml                 # 第一个产品（从现有内容迁移）
 │   └── _schema.yaml                # YAML 字段说明 + 示例
 ├── assets/
 │   └── images/
-│       └── XESA01/                 # 每个产品一个图片子目录
+│       └── DEMO01/                 # 每个产品一个图片子目录
 │           ├── 安装硅胶O型圈.png
 │           └── ...
 ├── output/                         # 生成产物（.gitignore）
-│   ├── XESA01.html
-│   └── XESA01.pdf
+│   ├── DEMO01.html
+│   └── DEMO01.pdf
 ├── gui/                            # 阶段 3 再做
 │   ├── main.py
 │   ├── editor.py
@@ -92,11 +95,11 @@
 
 ## 3. YAML 数据结构
 
-`products/XESA01.yaml`：
+`products/DEMO01.yaml`：
 
 ```yaml
 product:
-  model: XESA01
+  model: DEMO01
   name: 射频终端
   company: 南京软赫电子科技有限公司
   doc_id: SH-ZY-04
@@ -147,16 +150,16 @@ processes:
 
 ```bash
 # 仅生成 HTML（最快，便于预览/手动 ⌘P）
-python gen.py products/XESA01.yaml
+python gen.py products/DEMO01.yaml
 
 # 同时生成 HTML + PDF（Edge headless）
-python gen.py products/XESA01.yaml --pdf
+python gen.py products/DEMO01.yaml --pdf
 
 # 批量
 python gen.py products/*.yaml --pdf
 
 # 校验但不渲染（CI 用）
-python gen.py products/XESA01.yaml --check
+python gen.py products/DEMO01.yaml --check
 ```
 
 ---
@@ -169,9 +172,9 @@ python gen.py products/XESA01.yaml --check
 - 调用流程：理解需求 → 起草/修改 YAML → 触发 `python gen.py` → 报告结果
 
 用户场景示例：
-> "给 XESA02 加一道工序：安装电源滤波器，工序号 3，用 M3×6 螺钉固定，需要防静电手环"
+> "给 DEMO02 加一道工序：安装电源滤波器，工序号 3，用 M3×6 螺钉固定，需要防静电手环"
 
-Claude 据此修改 `products/XESA02.yaml`，调用 `python gen.py products/XESA02.yaml --pdf`。
+Claude 据此修改 `products/DEMO02.yaml`，调用 `python gen.py products/DEMO02.yaml --pdf`。
 
 ---
 
@@ -191,7 +194,7 @@ Claude 据此修改 `products/XESA02.yaml`，调用 `python gen.py products/XESA
 
 | 里程碑 | 内容 | 预计 |
 |--------|------|------|
-| **M1：CLI 核心** | gen.py + 模板拆分 + XESA01.yaml + 校验 + Edge PDF | 1 天 |
+| **M1：CLI 核心** | gen.py + 模板拆分 + DEMO01.yaml + 校验 + Edge PDF | 1 天 |
 | **M2：Claude Skill** | SKILL.md + schema 文档 + 示例 | 半天 |
 | **M3：PySide6 GUI** | 主窗口 + 工序编辑 + 实时预览 + 导出 | 2-3 天 |
 

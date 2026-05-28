@@ -2,9 +2,9 @@
 """sop_generate CLI 入口。
 
 用法：
-    python gen.py products/XESA01.yaml                # 仅生成 HTML
-    python gen.py products/XESA01.yaml --pdf          # 生成 HTML + PDF
-    python gen.py products/XESA01.yaml --check        # 仅校验，不渲染
+    python gen.py products/DEMO01.yaml                # 仅生成 HTML
+    python gen.py products/DEMO01.yaml --pdf          # 生成 HTML + PDF
+    python gen.py products/DEMO01.yaml --check        # 仅校验，不渲染
     python gen.py products/*.yaml --pdf               # 批量
 """
 from __future__ import annotations
