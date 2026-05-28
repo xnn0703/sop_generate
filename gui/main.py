@@ -31,7 +31,8 @@ paths.ensure_user_dirs()
 
 from gui.editor import ProcessEditor, ProductMetaEditor
 from gui.model import (
-    DEFAULT_PROCESS, Product, clone_product, list_products, new_product,
+    DEFAULT_PROCESS, Product, clone_product, import_legacy, list_products,
+    new_product,
 )
 
 
@@ -62,6 +63,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(tb)
 
         act_new = QAction("新建产品", self); act_new.triggered.connect(self.action_new_product); tb.addAction(act_new)
+        act_import = QAction("导入旧数据", self); act_import.triggered.connect(self.action_import_legacy); tb.addAction(act_import)
         act_save = QAction("保存", self); act_save.triggered.connect(self.action_save); tb.addAction(act_save)
         tb.addSeparator()
         act_html = QAction("导出 HTML", self); act_html.triggered.connect(self.action_export_html); tb.addAction(act_html)
@@ -203,6 +205,37 @@ class MainWindow(QMainWindow):
             self._schedule_preview()
 
     # ---------- 动作 ----------
+    def action_import_legacy(self) -> None:
+        src = QFileDialog.getExistingDirectory(
+            self, "选择老版本目录（应包含 products/ 子目录）",
+            str(Path.home()),
+        )
+        if not src:
+            return
+        try:
+            result = import_legacy(Path(src))
+        except ValueError as e:
+            QMessageBox.warning(self, "导入失败", str(e))
+            return
+
+        lines = [
+            f"✓ 导入 YAML：{len(result['imported_yaml'])} 个",
+            f"✓ 导入图片：{len(result['imported_images'])} 张",
+        ]
+        if result['skipped_yaml']:
+            lines.append("")
+            lines.append("跳过的 YAML（同名已存在，未覆盖）：")
+            lines.extend(f"  · {n}" for n in result['skipped_yaml'])
+        if result['skipped_images']:
+            lines.append("")
+            lines.append(f"跳过 {len(result['skipped_images'])} 张图片（同名已存在）")
+
+        QMessageBox.information(self, "导入完成", "\n".join(lines))
+        self._reload_product_list()
+        self.status.showMessage(
+            f"已从 {src} 导入 {len(result['imported_yaml'])} 个产品"
+        )
+
     def action_new_product(self) -> None:
         model, ok = QInputDialog.getText(self, "新建产品", "产品型号（仅字母数字/下划线）：")
         if not ok or not model.strip():

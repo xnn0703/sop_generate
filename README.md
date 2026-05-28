@@ -163,3 +163,22 @@ processes:                     # 1-16 项
 - macOS：`bash packaging/build_macos.sh` → 产出 `dist/sop_generate-mac/`
 - Windows：在 Win 机器上双击 `packaging\build_windows.bat` → 产出 `dist\sop_generate-win\`
 - CI：本仓含 `.github/workflows/build-windows.yml`，若镜像到 GitHub 可自动出 Windows 版（Gitee Go 暂未配置）
+
+---
+
+## 版本升级
+
+老版本里 `products/*.yaml` 和 `assets/images/*/` 是**纯数据**，跨版本兼容。升级新版本时两种方式：
+
+### 方式 1（推荐）：用 GUI 的"导入旧数据"按钮
+
+1. 解压新版本到任意新目录（如 `D:\sop_generate-v1.1.0\`）
+2. 启动新版本 `sop_generate.exe`
+3. 工具栏点 **"导入旧数据"** → 选老版本根目录（含 `products/` 子目录）
+4. 自动复制所有产品 YAML + 图片到新版本；同名文件**跳过不覆盖**，安全
+
+### 方式 2：手动复制
+
+解压新版本 → 把老版本的 `products/` 和 `assets/images/` 复制到新版本目录（覆盖示例）。
+
+⚠️ **不要直接用 7-Zip 把新版本解压覆盖老目录**——会把老的 products 和 assets 覆盖成示例数据。

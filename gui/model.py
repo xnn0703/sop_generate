@@ -96,6 +96,71 @@ def new_product(model: str) -> Product:
     return Product(path=path, product=product, processes=[])
 
 
+def import_legacy(src_dir: Path) -> dict[str, list[str]]:
+    """从老版本/外部目录导入产品 YAML + 图片。
+
+    src_dir 兼容两种结构：
+      - 老 sop_generate-win/（含 products/ + assets/images/）
+      - 直接传 products/ 目录（图片须用户单独放）
+
+    重名 YAML 默认跳过（不覆盖用户当前数据）；同名图片同样跳过。
+    返回字典：imported_yaml / imported_images / skipped_yaml / skipped_images。
+    """
+    if not src_dir.exists():
+        raise ValueError(f"目录不存在：{src_dir}")
+
+    # 定位 products / images
+    if (src_dir / "products").is_dir():
+        src_products = src_dir / "products"
+        src_images   = src_dir / "assets" / "images"
+    elif src_dir.name == "products" and src_dir.is_dir():
+        src_products = src_dir
+        src_images   = src_dir.parent / "assets" / "images"
+    else:
+        raise ValueError(
+            f"在 {src_dir} 下未找到 products 目录。请选择老版本根目录（含 products/）"
+            "或直接选 products 目录。"
+        )
+
+    imported_yaml: list[str] = []
+    skipped_yaml: list[str]  = []
+    PRODUCTS_DIR.mkdir(parents=True, exist_ok=True)
+    for yaml_file in sorted(src_products.glob("*.yaml")):
+        if yaml_file.name.startswith("_"):
+            continue  # 跳过 _schema.yaml 等内部文件
+        dst = PRODUCTS_DIR / yaml_file.name
+        if dst.exists():
+            skipped_yaml.append(yaml_file.name)
+            continue
+        shutil.copy2(yaml_file, dst)
+        imported_yaml.append(yaml_file.name)
+
+    imported_images: list[str] = []
+    skipped_images: list[str]  = []
+    if src_images.is_dir():
+        for model_dir in sorted(src_images.iterdir()):
+            if not model_dir.is_dir():
+                continue
+            dst_model = IMAGES_DIR / model_dir.name
+            dst_model.mkdir(parents=True, exist_ok=True)
+            for img in sorted(model_dir.iterdir()):
+                if not img.is_file():
+                    continue
+                dst_img = dst_model / img.name
+                if dst_img.exists():
+                    skipped_images.append(f"{model_dir.name}/{img.name}")
+                    continue
+                shutil.copy2(img, dst_img)
+                imported_images.append(f"{model_dir.name}/{img.name}")
+
+    return {
+        "imported_yaml":  imported_yaml,
+        "imported_images": imported_images,
+        "skipped_yaml":   skipped_yaml,
+        "skipped_images": skipped_images,
+    }
+
+
 def clone_product(src: Product, new_model: str) -> Product:
     """基于现有产品派生新产品（保留工序结构，清空图片）。"""
     new_path = PRODUCTS_DIR / f"{new_model}.yaml"
