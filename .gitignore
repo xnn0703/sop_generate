@@ -18,6 +18,11 @@ packaging/icon_pngs/
 # ===== 运行时输出 =====
 output/
 
+# ===== 临时测试数据（_ 前缀但非 _schema）=====
+products/_test_*.yaml
+assets/images/TEST*/
+assets/images/_test_*/
+
 # ===== 系统/编辑器 =====
 .DS_Store
 Thumbs.db

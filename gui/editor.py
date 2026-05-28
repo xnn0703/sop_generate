@@ -45,8 +45,9 @@ class ProcessEditor(QWidget):
         head_layout.addRow("", self.key_check)
         v.addWidget(head)
 
-        # 操作说明
-        self.ops_editor = ListEditor("操作说明", max_items=6, max_len_cn=30)
+        # 操作说明（超过 6 条自动拆页，最多 18 条）
+        self.ops_editor = ListEditor("操作说明（>6 条会自动拆页，建议拆成多工序更清晰）",
+                                     max_items=18, max_len_cn=30)
         self.ops_editor.changed.connect(self._mark_changed)
         v.addWidget(self.ops_editor)
 

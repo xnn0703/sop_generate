@@ -13,10 +13,14 @@
 
 {% include 'toc.html.j2' %}
 
+{%- for flow_chunk in flow_chunks %}
+{% with flow_chunk=flow_chunk, flow_index=loop.index, flow_total=flow_chunks|length %}
 {% include 'flow.html.j2' %}
+{% endwith %}
+{%- endfor %}
 
-{%- for proc in processes %}
-{% with proc=proc, index=loop.index, total=processes|length %}
+{%- for proc in process_pages %}
+{% with proc=proc, total=processes|length %}
 {% include 'process.html.j2' %}
 {% endwith %}
 {%- endfor %}

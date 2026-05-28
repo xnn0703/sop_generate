@@ -1,5 +1,8 @@
-{#- 单个工序详情页（横向 A4）-#}
-{#- 输入：proc, product, index, total, image_base -#}
+{#- 单个工序详情页（横向 A4，支持自动拆页）-#}
+{#- 输入：proc（含 _proc_index / _ops_chunk / _sub_index / _sub_total / _is_continuation）, product, total -#}
+{%- set sub_total = proc._sub_total -%}
+{%- set sub_index = proc._sub_index -%}
+{%- set is_cont   = proc._is_continuation -%}
 <section class="page page-landscape">
   <div class="sheet">
   <table class="proc">
@@ -21,24 +24,31 @@
     <tr>
       <td class="h-value">{{ product.name }}</td>
       <td class="h-value">{{ product.model }}</td>
-      <td class="h-value">{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</td>
+      <td class="h-value">
+        {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}
+        {%- if sub_total > 1 %} <small>（续 {{ sub_index }}/{{ sub_total }}）</small>{% endif %}
+      </td>
       <td class="h-value">{{ product.doc_id }}</td>
       <td class="h-value">{{ product.version }}</td>
-      <td class="h-value">{{ index }} / {{ total }}</td>
+      <td class="h-value">{{ proc._proc_index }} / {{ total }}</td>
       <td class="h-value">{{ product.publish_date }}</td>
     </tr>
 
     <tr>
       <td class="ops-cell ops-main" colspan="3">
-        <div class="sec-title">操作说明：</div>
-        <ol>
-          {%- for op in proc.operations %}
+        <div class="sec-title">
+          操作说明{% if sub_total > 1 %}（第 {{ sub_index }} 部分 / 共 {{ sub_total }} 部分）{% endif %}：
+        </div>
+        <ol{% if is_cont %} start="{{ (sub_index - 1) * 6 + 1 }}"{% endif %}>
+          {%- for op in proc._ops_chunk %}
           <li>{{ op }}</li>
           {%- endfor %}
         </ol>
       </td>
       <td class="pic-cell{% if proc.images | length > 1 %} two-imgs{% endif %}" colspan="5" rowspan="3">
-        {%- if proc.images | length > 1 %}
+        {%- if is_cont %}
+        <div class="cont-overlay">（图片见首页）</div>
+        {%- elif proc.images | length > 1 %}
         <div class="imgs">
           {%- for img in proc.images %}
           <img src="{{ image_base }}/{{ img }}" alt="{{ proc.name }}-{{ loop.index }}">
@@ -52,20 +62,23 @@
 
     <tr>
       <td class="ops-cell ops-note" colspan="3">
-        <div class="sec-title">注意事项：</div>
+        <div class="sec-title">注意事项{% if is_cont %}（见首页）{% endif %}：</div>
+        {%- if not is_cont %}
         <div class="notes">
           {%- for note in proc.notes %}
           <p>{{ loop.index | circled }} {{ note }}</p>
           {%- endfor %}
         </div>
+        {%- endif %}
       </td>
     </tr>
 
     <tr>
       <td class="mat-cell" colspan="3">
         <table class="mat">
-          {%- set pad_tools = 4 - (proc.tools | length) %}
-          {%- set pad_mats  = 4 - (proc.materials | length) %}
+          {%- if is_cont %}
+          <tr><td colspan="6" style="text-align:center;color:#888;padding:4mm;">工具设备 / 作业材料 见首页</td></tr>
+          {%- else %}
           {%- for i in range(4) %}
           <tr>
             {%- if loop.first %}<td class="cat" rowspan="4">工具设备</td>{%- endif %}
@@ -76,6 +89,7 @@
             <td class="txt">{{ proc.materials[i] if i < (proc.materials | length) else '' }}</td>
           </tr>
           {%- endfor %}
+          {%- endif %}
         </table>
       </td>
     </tr>

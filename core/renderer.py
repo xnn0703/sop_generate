@@ -10,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 
 from . import paths
 from .paths import ASSETS_DIR, OUTPUT_DIR, TEMPLATES_DIR  # noqa: F401（向后兼容导出）
+from .validator import OPS_PER_PAGE, PROCESSES_PER_FLOW_PAGE
 
 
 # ===== Jinja2 自定义 filter =====
@@ -50,11 +51,57 @@ def load_yaml(path: Path) -> ProductData:
     )
 
 
+_PROC_DEFAULTS: dict[str, Any] = {
+    "key": False,
+    "operations": [],
+    "notes": [],
+    "images": [],
+    "tools": [],
+    "materials": [],
+}
+
+
+def _normalize_processes(processes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """填充缺省字段，避免 StrictUndefined 在模板里炸。"""
+    out: list[dict[str, Any]] = []
+    for p in processes:
+        merged = {**_PROC_DEFAULTS, **p}
+        out.append(merged)
+    return out
+
+
+def _expand_process_pages(processes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """把工序列表展开为渲染页列表。
+    operations 超过单页容量时自动拆成多页：第 1 页含完整结构（图、工具、材料、注意事项），
+    续页只显示 operations 续写，工序号保持不变，标记 (续 N/M)。
+    """
+    pages: list[dict[str, Any]] = []
+    for proc_idx, proc in enumerate(processes, start=1):
+        ops = proc.get("operations") or []
+        chunks = [ops[i:i + OPS_PER_PAGE] for i in range(0, len(ops), OPS_PER_PAGE)] or [[]]
+        total = len(chunks)
+        for sub_i, chunk in enumerate(chunks, start=1):
+            pages.append({
+                **proc,
+                "_proc_index":     proc_idx,
+                "_ops_chunk":      chunk,
+                "_sub_index":      sub_i,
+                "_sub_total":      total,
+                "_is_continuation": sub_i > 1,
+            })
+    return pages
+
+
+def _split_flow_chunks(processes: list[dict[str, Any]],
+                        per_page: int = PROCESSES_PER_FLOW_PAGE) -> list[list[dict[str, Any]]]:
+    """把工序按每页 per_page 个切片，用于工艺流程图分页渲染。"""
+    return [processes[i:i + per_page] for i in range(0, len(processes), per_page)] or [[]]
+
+
 def render_manual(data: ProductData, image_base: str | None = None) -> str:
     """渲染完整 HTML。
 
     image_base: HTML 中图片 src 前缀，默认指向项目内 assets/images/<model>/。
-    传入相对路径（如 'assets/images/XESA01'）便于浏览器和 Edge headless 解析。
     """
     env = _make_env()
     template = env.get_template("manual.html.j2")
@@ -64,9 +111,15 @@ def render_manual(data: ProductData, image_base: str | None = None) -> str:
         model = data.product.get("model", "")
         image_base = f"../assets/images/{model}"
 
+    procs = _normalize_processes(data.processes)
+    process_pages = _expand_process_pages(procs)
+    flow_chunks   = _split_flow_chunks(procs)
+
     return template.render(
         product=data.product,
-        processes=data.processes,
+        processes=procs,                  # 目录页用规范化后的列表
+        process_pages=process_pages,      # 工序详情页用展开后的
+        flow_chunks=flow_chunks,          # 工艺流程图分页
         image_base=image_base,
     )
 

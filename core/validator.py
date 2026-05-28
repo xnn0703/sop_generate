@@ -16,13 +16,15 @@ MAX_PROC_NAME_CN     = 12   # 工序名 最长汉字数
 MAX_OP_CN            = 30   # 单条操作说明 最长汉字数
 MAX_NOTE_CN          = 28   # 单条注意事项 最长汉字数
 MAX_TOOL_CN          = 10   # 工具/材料 单项最长汉字数
-MAX_OPS              = 6    # 操作说明 条数上限
-MAX_NOTES            = 4    # 注意事项 条数上限
+OPS_PER_PAGE         = 6    # 单页能放下的操作说明 条数（超过自动拆页）
+MAX_OPS              = 18   # 操作说明 条数上限（最多拆 3 页）
+MAX_NOTES            = 4    # 注意事项 条数上限（超过请拆工序）
 MAX_TOOLS            = 4    # 工具设备 项数上限
 MAX_MATS             = 4    # 作业材料 项数上限
-MAX_IMAGES           = 2    # 图片张数上限
+MAX_IMAGES           = 2    # 图片张数上限（多图建议拆工序）
 MIN_IMAGES           = 1    # 图片张数下限
-MAX_PROCESSES        = 16   # 工序总数上限
+MAX_PROCESSES        = 32   # 工序总数上限（流程图会自动分页）
+PROCESSES_PER_FLOW_PAGE = 10  # 工艺流程图单页最多节点数
 
 DATE_RE    = re.compile(r"^\d{4}-\d{1,2}-\d{1,2}$")
 VERSION_RE = re.compile(r"^[A-Z]/\d+$")
@@ -130,6 +132,9 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
             errors.append(f"{prefix}.operations 不能为空")
         if len(ops) > MAX_OPS:
             errors.append(f"{prefix}.operations 条数 {len(ops)} 超过上限 {MAX_OPS}")
+        elif len(ops) > OPS_PER_PAGE:
+            n_pages = (len(ops) + OPS_PER_PAGE - 1) // OPS_PER_PAGE
+            warnings.append(f"{prefix}.operations 条数 {len(ops)} 超过单页容量 {OPS_PER_PAGE}，将自动拆成 {n_pages} 页")
         for j, op in enumerate(ops, start=1):
             if _cn_len(op) > MAX_OP_CN:
                 warnings.append(f"{prefix}.operations[{j}] 偏长（{_cn_len(op)} > {MAX_OP_CN}）")
@@ -150,8 +155,13 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
                     warnings.append(f"{prefix}.{key}[{j}] 偏长（{_cn_len(it)} > {MAX_TOOL_CN}）")
 
         images = proc.get("images") or []
-        if not (MIN_IMAGES <= len(images) <= MAX_IMAGES):
-            errors.append(f"{prefix}.images 张数应为 {MIN_IMAGES}-{MAX_IMAGES}，得到 {len(images)}")
+        if len(images) > MAX_IMAGES:
+            errors.append(
+                f"{prefix}.images 张数 {len(images)} 超过上限 {MAX_IMAGES}；"
+                "建议把当前工序拆成多道工序，每道 1-2 张图（多图会影响显示效果）"
+            )
+        elif len(images) < MIN_IMAGES:
+            errors.append(f"{prefix}.images 至少需要 {MIN_IMAGES} 张")
         if img_root is not None:
             for img in images:
                 if not (img_root / img).exists():

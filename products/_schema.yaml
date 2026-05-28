@@ -13,12 +13,16 @@
 # product.publish_date:     必填，形如 YYYY-M-D
 # product.effective_date:   必填，形如 YYYY-M-D
 #
-# processes:                必填，1-16 项
+# processes:                必填，1-32 项；超过 10 项时工艺流程图自动分页
 #   - name:                 必填，≤ 12 个汉字
 #     key:                  布尔，true 表示关键工序（封面/目录/工序页加 ★）
-#     operations:           1-6 条，每条 ≤ 30 个汉字
+#     operations:           1-18 条，每条 ≤ 30 个汉字
+#                           单页最多 6 条；超过会自动拆分多页（标注"续 N/M"）
+#                           续页只重复 operations，图片/工具/材料/注意事项仅在首页
 #     notes:                0-4 条，每条 ≤ 28 个汉字
+#                           4 条不够请把工序拆分（不会自动拆页）
 #     images:               1-2 个文件名，文件必须在 assets/images/<model>/ 下
+#                           推荐每工序 1-2 张图；如步骤多图也多，请把工序拆分
 #     tools:                1-4 项，每项 ≤ 10 个汉字
 #     materials:            1-4 项，每项 ≤ 10 个汉字
 

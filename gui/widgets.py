@@ -91,7 +91,7 @@ class ImageListEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         header = QHBoxLayout()
-        self.label = QLabel("图片（拖入文件或点击下方编辑文件名）")
+        self.label = QLabel("图片（拖入文件；建议 1-2 张，多了请拆工序）")
         self.label.setStyleSheet("font-weight: bold;")
         self.status = QLabel("0/2 张")
         self.status.setStyleSheet("color: #888; font-size: 11px;")
