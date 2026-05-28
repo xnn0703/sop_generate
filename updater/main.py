@@ -71,7 +71,7 @@ class UpdateWorker(QObject):
 
             self.stage_changed.emit("解压并应用更新...")
             self.progress.emit(0, 0)   # 切到不确定进度
-            new_exe = apply_update(parts, self.app_dir, dl_progress)
+            new_exe = apply_update(parts, self.app_dir, tag=info.tag, progress=dl_progress)
 
             self.finished_ok.emit(str(new_exe))
         except Exception as e:

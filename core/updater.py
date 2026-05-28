@@ -68,8 +68,12 @@ class ReleaseInfo:
 
     @property
     def archive_parts(self) -> list[dict]:
-        """筛选出 7z 分卷附件并按名字排序。"""
-        parts = [a for a in self.assets if re.search(r"\.7z\.\d+$", a["name"])]
+        """筛选出当前平台的 7z 分卷附件，按名字排序。"""
+        if sys.platform == "darwin":
+            pat = re.compile(r"sop_generate-mac.+\.7z\.\d+$", re.I)
+        else:
+            pat = re.compile(r"sop_generate-win.+\.7z\.\d+$", re.I)
+        parts = [a for a in self.assets if pat.search(a["name"])]
         return sorted(parts, key=lambda x: x["name"])
 
 
@@ -183,15 +187,13 @@ def _extract_7z(archive: Path, dest: Path,
         progress("解压完成", 1, 1)
 
 
-def apply_update(parts: list[Path], app_dir: Path,
+def apply_update(parts: list[Path], app_dir: Path, tag: str = "",
                  progress: ProgressCb | None = None) -> Path:
     """应用更新到 app_dir，返回新主程序可执行文件路径。
 
-    流程：
-      a. 合并分卷
-      b. 解压到 staging 目录
-      c. 用 staging 内 sop_generate-win/ 替换 app_dir 下除 PRESERVE_PATHS 外的所有内容
-      d. 返回新主程序路径（Windows: app_dir/sop_generate.exe；macOS: app_dir/sop_generate.app）
+    Windows：原地替换（除 PRESERVE_PATHS 外的文件）。
+    macOS：解压到 app_dir/sop_generate-mac-<tag>/ 隔壁目录，并把用户数据复制过去
+            （避免 updater 删除自己所在的 .app 包）。
     """
     staging = app_dir.parent / f".sop_generate_staging_{int(time.time())}"
     staging.mkdir(parents=True, exist_ok=True)
@@ -204,7 +206,7 @@ def apply_update(parts: list[Path], app_dir: Path,
         except OSError:
             pass
 
-        # 解压结果应该是 staging/sop_generate-win/（Windows）或 staging/sop_generate-mac/（macOS）
+        # 解压结果应该是 staging/sop_generate-{win,mac}-vX.Y.Z/
         sub_dirs = [d for d in staging.iterdir() if d.is_dir()]
         if not sub_dirs:
             raise RuntimeError("7z 解压后未找到任何子目录")
@@ -212,28 +214,47 @@ def apply_update(parts: list[Path], app_dir: Path,
         if progress:
             progress(f"解压完成，新版位于 {new_root.name}", 1, 1)
 
-        # 覆盖 app_dir 下的非用户数据文件
-        for item in new_root.iterdir():
-            if item.name in PRESERVE_PATHS:
-                continue   # 跳过用户数据
-            target = app_dir / item.name
-            if progress:
-                progress(f"替换 {item.name}", 0, 1)
-            if target.exists():
-                if target.is_dir():
-                    shutil.rmtree(target)
-                else:
-                    target.unlink()
-            if item.is_dir():
-                shutil.copytree(item, target)
-            else:
-                shutil.copy2(item, target)
-
-        # 找新主程序路径
         if sys.platform == "darwin":
-            app_bundle = app_dir / "sop_generate.app"
-            return app_bundle if app_bundle.exists() else app_dir
+            # macOS：移到 app_dir 同级，并把当前用户数据复制过去
+            tag_suffix = f"-{tag}" if tag else ""
+            target_dir = app_dir / f"sop_generate-mac{tag_suffix}"
+            if progress:
+                progress(f"准备 {target_dir.name}", 0, 1)
+            if target_dir.exists():
+                shutil.rmtree(target_dir)
+            shutil.move(str(new_root), str(target_dir))
+
+            # 复制用户数据（products / assets / output）从当前 app_dir 到新目录
+            for sub in PRESERVE_PATHS:
+                src = app_dir / sub
+                if src.exists():
+                    dst = target_dir / sub
+                    if dst.exists():
+                        shutil.rmtree(dst)
+                    if progress:
+                        progress(f"迁移 {sub}", 0, 1)
+                    shutil.copytree(src, dst)
+
+            new_app = target_dir / "sop_generate.app"
+            return new_app if new_app.exists() else target_dir
         else:
+            # Windows：原地替换文件（保留 PRESERVE_PATHS）
+            for item in new_root.iterdir():
+                if item.name in PRESERVE_PATHS:
+                    continue
+                target = app_dir / item.name
+                if progress:
+                    progress(f"替换 {item.name}", 0, 1)
+                if target.exists():
+                    if target.is_dir():
+                        shutil.rmtree(target)
+                    else:
+                        target.unlink()
+                if item.is_dir():
+                    shutil.copytree(item, target)
+                else:
+                    shutil.copy2(item, target)
+
             exe = app_dir / "sop_generate.exe"
             return exe if exe.exists() else app_dir
     finally:
