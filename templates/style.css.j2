@@ -1,6 +1,7 @@
-/* ===== 打印分页：纵向 / 横向命名页（A3）===== */
-@page portrait  { size: A3 portrait;  margin: 20mm 18mm; }
-@page landscape { size: A3 landscape; margin: 14mm 16mm; }
+/* ===== 打印分页：纵向 / 横向命名页（A3）=====
+   @page margin 必须为 0，否则 .page 会被双重缩放（边距由 .page 自己的 padding 控制） */
+@page portrait  { size: A3 portrait;  margin: 0; }
+@page landscape { size: A3 landscape; margin: 0; }
 .page-portrait  { page: portrait; }
 .page-landscape { page: landscape; }
 
@@ -33,7 +34,8 @@ html, body {
 
 @media print {
   body { background: #fff; }
-  .page { width: auto; height: auto; padding: 0; margin: 0; box-shadow: none; }
+  .page { margin: 0; box-shadow: none; }
+  /* width/height/padding 保持，与 @page 物理尺寸 1:1 对齐 */
 }
 
 /* 防止任何内部表格被分页拆开 */
