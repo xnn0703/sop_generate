@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from core import (
+    __version__,
     ValidationError,
     export_pdf,
     find_browser,
@@ -66,8 +67,9 @@ def _process_one(yaml_path: Path, *, do_pdf: bool, check_only: bool) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="sop_generate · 作业指导书生成器"
+        description=f"sop_generate v{__version__} · 作业指导书生成器"
     )
+    parser.add_argument("--version", action="version", version=f"sop_generate {__version__}")
     parser.add_argument(
         "yaml_files",
         nargs="+",

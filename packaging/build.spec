@@ -9,11 +9,16 @@
     Windows:  dist/sop_generate/sop_generate.exe + _internal/
     macOS:    dist/sop_generate.app
 """
+import re
 import sys
 from pathlib import Path
 
 # spec 文件运行时 cwd 是项目根（PyInstaller 习惯）
 PROJECT_ROOT = Path(SPECPATH).resolve().parent
+
+# 从 core/__init__.py 读 __version__（单一来源）
+_VER_RE = re.compile(r'__version__\s*=\s*"([^"]+)"')
+VERSION = _VER_RE.search((PROJECT_ROOT / "core" / "__init__.py").read_text("utf-8")).group(1)
 
 block_cipher = None
 
@@ -89,8 +94,8 @@ if sys.platform == "darwin":
         icon=str(PROJECT_ROOT / "packaging" / "icon.icns"),
         bundle_identifier="com.softhz.sop_generate",
         info_plist={
-            "CFBundleShortVersionString": "1.0.0",
-            "CFBundleVersion": "1.0.0",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,
         },
     )

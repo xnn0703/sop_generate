@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from core import paths
+from core import __version__, paths
 from core.renderer import render_manual, ProductData, write_html
 from core.validator import validate
 from core.pdf_export import export_pdf, find_browser
@@ -42,7 +42,7 @@ PREVIEW_DELAY_MS = 600
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("sop_generate · 作业指导书生成器")
+        self.setWindowTitle(f"sop_generate v{__version__} · 作业指导书生成器")
         self.resize(1500, 900)
 
         self.current: Product | None = None
