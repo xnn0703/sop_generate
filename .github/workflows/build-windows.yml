@@ -1,16 +1,12 @@
 # sop_generate · Windows 自动打包
 # ----------------------------------------------------------
-# 备用工作流：当代码被镜像/推送到 GitHub 时，自动在
-# windows-latest runner 上跑 PyInstaller，产出 sop_generate-win/。
+# 在 GitHub Actions 上构建 Windows 版，打 v* tag 时上传到独立的公开 Gitee
+# 发版仓库（owner/repo 通过 GitHub Secrets 注入，避免源码暴露业务信息）。
 #
-# 当前主仓在 Gitee (https://gitee.com/soft-hertz/sop_generate)，
-# 本文件仅在你后续把仓库镜像到 GitHub 后才会生效。
-#
-# 使用方式：
-#   1) 把当前仓库镜像（或 fork）到 GitHub
-#   2) 在 GitHub 仓库页 → Actions 标签 → 启用工作流
-#   3) push 到 main 即触发；或在 Actions 页手动 run
-#   4) 构建完成在该次 run 的 "Artifacts" 区下载 sop_generate-win.zip
+# 必需的 GitHub Secrets（在仓库 Settings → Secrets and variables → Actions 配置）：
+#   - GITEE_TOKEN            : Gitee 私人令牌（projects scope），用于推送 release
+#   - RELEASE_GITEE_OWNER    : 发版用的公开 Gitee 仓库所有者（如 'your-org'）
+#   - RELEASE_GITEE_REPO     : 发版用的公开 Gitee 仓库名（如 'sop_generate-releases'）
 name: build-windows
 
 on:
@@ -27,6 +23,8 @@ jobs:
     runs-on: windows-latest
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
+      RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
 
     steps:
       - name: 拉取代码
@@ -43,6 +41,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r packaging/requirements-build.txt
+
+      - name: 注入 release.config.json（从 Secrets 取实际 owner/repo）
+        if: env.RELEASE_GITEE_OWNER != '' && env.RELEASE_GITEE_REPO != ''
+        shell: pwsh
+        run: |
+          $cfg = @{
+            gitee_owner = $env:RELEASE_GITEE_OWNER
+            gitee_repo  = $env:RELEASE_GITEE_REPO
+            gitee_api   = "https://gitee.com/api/v5"
+          } | ConvertTo-Json
+          Set-Content -Path release.config.json -Value $cfg -Encoding UTF8
+          Write-Host "注入后的 release.config.json："
+          Get-Content release.config.json
 
       - name: PyInstaller 打包
         run: pyinstaller packaging/build.spec --clean --noconfirm
@@ -90,11 +101,11 @@ jobs:
           Write-Host "压缩总大小：$([math]::Round($total / 1MB, 1)) MB"
 
       - name: 同步到 Gitee Release (仅 tag 触发)
-        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != '' && env.RELEASE_GITEE_OWNER != ''
         shell: pwsh
         run: |
-          $owner = 'soft-hertz'
-          $repo  = 'sop_generate'
+          $owner = $env:RELEASE_GITEE_OWNER
+          $repo  = $env:RELEASE_GITEE_REPO
           $api   = "https://gitee.com/api/v5/repos/$owner/$repo"
           $tok   = $env:GITEE_TOKEN
 
@@ -162,7 +173,7 @@ jobs:
             }
           }
           Write-Host "✓ 全部分卷已挂载到 Gitee Release"
-          Write-Host "下载页：https://gitee.com/$owner/$repo/releases/tag/$tag"
+          Write-Host ("下载页：https://gitee.com/{0}/{1}/releases/tag/{2}" -f $owner, $repo, $tag)
 
       - name: 创建 GitHub Release (仅 tag 触发)
         if: startsWith(github.ref, 'refs/tags/v')

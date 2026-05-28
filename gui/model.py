@@ -14,11 +14,11 @@ from core.paths import IMAGES_DIR, PRODUCTS_DIR  # noqa: F401
 DEFAULT_PRODUCT = {
     "model": "",
     "name": "",
-    "company": "南京软赫电子科技有限公司",
-    "doc_id": "SH-ZY-04",
+    "company": "",
+    "doc_id": "",
     "version": "A/0",
-    "publish_date": "2026-3-30",
-    "effective_date": "2026-4-1",
+    "publish_date": "",
+    "effective_date": "",
 }
 
 DEFAULT_PROCESS = {

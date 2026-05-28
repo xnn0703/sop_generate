@@ -31,7 +31,7 @@ example:
   product:
     model: DEMO01
     name: 示例产品
-    company: 南京软赫电子科技有限公司
+    company: 公司名称
     doc_id: SH-ZY-99
     version: A/0
     publish_date: 2026-1-1

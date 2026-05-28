@@ -10,7 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, QUrl, Qt
+from PySide6.QtCore import QObject, QThread, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
@@ -26,6 +26,7 @@ from core import __version__, paths
 from core.renderer import render_manual, ProductData, write_html
 from core.validator import validate
 from core.pdf_export import export_pdf, find_browser
+from core.updater import check_latest, is_newer, is_release_configured
 
 paths.ensure_user_dirs()
 
@@ -37,6 +38,18 @@ from gui.model import (
 
 
 PREVIEW_DELAY_MS = 600
+
+SKIP_VERSION_FILE = paths.app_dir() / ".skip_version"   # 记录用户"跳过此版本"的 tag
+
+
+class UpdateCheckWorker(QObject):
+    """后台线程查最新版本"""
+    found = Signal(object)   # ReleaseInfo or None
+    def run(self) -> None:
+        try:
+            self.found.emit(check_latest())
+        except Exception:
+            self.found.emit(None)
 
 
 class MainWindow(QMainWindow):
@@ -57,6 +70,10 @@ class MainWindow(QMainWindow):
 
         self._reload_product_list()
 
+        # 启动后延迟 2 秒后台查更新（不阻塞 UI）
+        if is_release_configured():
+            QTimer.singleShot(2000, self._start_update_check)
+
     # ---------- UI 构建 ----------
     def _build_toolbar(self) -> None:
         tb = QToolBar()
@@ -65,6 +82,8 @@ class MainWindow(QMainWindow):
         act_new = QAction("新建产品", self); act_new.triggered.connect(self.action_new_product); tb.addAction(act_new)
         act_import = QAction("导入旧数据", self); act_import.triggered.connect(self.action_import_legacy); tb.addAction(act_import)
         act_save = QAction("保存", self); act_save.triggered.connect(self.action_save); tb.addAction(act_save)
+        tb.addSeparator()
+        act_update = QAction("检查更新", self); act_update.triggered.connect(self._start_update_check_manual); tb.addAction(act_update)
         tb.addSeparator()
         act_html = QAction("导出 HTML", self); act_html.triggered.connect(self.action_export_html); tb.addAction(act_html)
         act_pdf = QAction("导出 PDF", self); act_pdf.triggered.connect(self.action_export_pdf); tb.addAction(act_pdf)
@@ -344,6 +363,100 @@ class MainWindow(QMainWindow):
 
     def _schedule_preview(self) -> None:
         self._preview_timer.start(PREVIEW_DELAY_MS)
+
+    # ---------- 检查更新 ----------
+    def _start_update_check(self, manual: bool = False) -> None:
+        self._update_manual = manual
+        self._update_thread = QThread(self)
+        self._update_worker = UpdateCheckWorker()
+        self._update_worker.moveToThread(self._update_thread)
+        self._update_thread.started.connect(self._update_worker.run)
+        self._update_worker.found.connect(self._on_update_check_done)
+        self._update_worker.found.connect(self._update_thread.quit)
+        self._update_thread.start()
+
+    def _start_update_check_manual(self) -> None:
+        if not is_release_configured():
+            QMessageBox.information(
+                self, "暂未配置",
+                "自动更新功能需要在 release.config.json 配置 Gitee 发版仓库。"
+                "\n打包发布时由 CI 注入此配置。"
+            )
+            return
+        self.status.showMessage("正在检查更新...")
+        self._start_update_check(manual=True)
+
+    def _on_update_check_done(self, info) -> None:
+        manual = getattr(self, "_update_manual", False)
+        if info is None:
+            if manual:
+                QMessageBox.warning(self, "检查失败", "无法连接到 Gitee，请检查网络。")
+            self.status.showMessage("更新检查失败" if manual else "")
+            return
+        if not is_newer(info.tag, __version__):
+            if manual:
+                QMessageBox.information(self, "已是最新", f"当前版本 v{__version__} 已是最新。")
+            self.status.showMessage(f"当前 v{__version__} 已是最新")
+            return
+
+        # 用户曾"跳过此版本"
+        if SKIP_VERSION_FILE.exists():
+            try:
+                if SKIP_VERSION_FILE.read_text().strip() == info.tag and not manual:
+                    return
+            except OSError:
+                pass
+
+        # 弹窗询问
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Information)
+        box.setWindowTitle("发现新版本")
+        box.setText(f"<b>发现新版本 {info.tag}</b><br>当前版本 v{__version__}")
+        body = (info.body or "").strip()
+        if body:
+            short = body[:300] + ("..." if len(body) > 300 else "")
+            box.setInformativeText(short)
+        update_btn = box.addButton("立即更新", QMessageBox.AcceptRole)
+        later_btn = box.addButton("暂不更新", QMessageBox.RejectRole)
+        skip_btn  = box.addButton("跳过此版本", QMessageBox.DestructiveRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is update_btn:
+            self._launch_updater(info.tag)
+        elif clicked is skip_btn:
+            try:
+                SKIP_VERSION_FILE.write_text(info.tag)
+            except OSError:
+                pass
+
+    def _launch_updater(self, tag: str) -> None:
+        """启动 updater 子进程，自身退出。"""
+        import os
+        import subprocess
+
+        # 找 updater 可执行文件
+        app_dir = paths.app_dir()
+        if getattr(sys, "frozen", False):
+            # 打包态：updater 在主程序旁
+            if sys.platform == "win32":
+                updater_exe = app_dir / "updater.exe"
+            elif sys.platform == "darwin":
+                updater_exe = app_dir / "updater.app" / "Contents" / "MacOS" / "updater"
+            else:
+                updater_exe = app_dir / "updater"
+            if not updater_exe.exists():
+                QMessageBox.critical(self, "升级失败", f"未找到 updater 可执行文件：{updater_exe}")
+                return
+            cmd = [str(updater_exe), "--pid", str(os.getpid()), "--tag", tag, "--app-dir", str(app_dir)]
+            subprocess.Popen(cmd, cwd=str(app_dir))
+        else:
+            # 开发态：直接跑 python -m updater.main
+            cmd = [sys.executable, "-m", "updater.main",
+                   "--pid", str(os.getpid()), "--tag", tag, "--app-dir", str(app_dir)]
+            subprocess.Popen(cmd, cwd=str(paths.resource_dir()))
+
+        # 主程序立即退出，让 updater 接管
+        QApplication.quit()
 
     def _refresh_preview(self) -> None:
         if not self.current:

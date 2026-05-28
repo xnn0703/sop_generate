@@ -38,6 +38,5 @@
 - 打 tag 时 7z 极限压缩 + 30MB 分卷上传 Gitee Release（国内快速下载）+ 同步建 GitHub Release
 
 ### 代码托管
-- 主仓 Gitee：<https://gitee.com/soft-hertz/sop_generate>
-- GitHub 镜像：<https://github.com/xnn0703/sop_generate>
-- `git push` 一次同时推到两边
+- 主仓与发版位置见 `release.config.json`
+- `git push` 同时推到所有配置的远程

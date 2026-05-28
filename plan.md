@@ -101,7 +101,7 @@
 product:
   model: DEMO01
   name: 射频终端
-  company: 南京软赫电子科技有限公司
+  company: 公司名称
   doc_id: SH-ZY-04
   version: A/0
   publish_date: 2026-3-30
@@ -168,7 +168,7 @@ python gen.py products/DEMO01.yaml --check
 
 `SKILL.md` 描述：
 - YAML schema + 字段约束
-- 触发条件（关键字："作业指导书"、"工艺指导书"、"XESA"、"宏图"）
+- 触发条件（关键字："作业指导书"、"工艺指导书"、"XESA"、""）
 - 调用流程：理解需求 → 起草/修改 YAML → 触发 `python gen.py` → 报告结果
 
 用户场景示例：

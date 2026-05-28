@@ -1,0 +1,7 @@
+{
+  "_comment": "发版与自动更新的 Gitee 公开仓库配置。CI 会把分卷推到这个仓库；客户端从这个仓库的 release 检查更新。",
+  "gitee_owner": "your-org",
+  "gitee_repo": "sop_generate-releases",
+  "gitee_api": "https://gitee.com/api/v5",
+  "gitee_release_url": "https://gitee.com/{owner}/{repo}/releases"
+}

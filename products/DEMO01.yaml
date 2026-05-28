@@ -4,8 +4,8 @@
 product:
   model: DEMO01
   name: 演示产品
-  company: 南京软赫电子科技有限公司
-  doc_id: SH-ZY-DEMO
+  company: 公司名称
+  doc_id: DOC-XX-001
   version: A/0
   publish_date: 2026-1-1
   effective_date: 2026-1-15

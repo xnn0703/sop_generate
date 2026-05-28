@@ -1,9 +1,9 @@
 # sop_generate · 作业指导书生成器
 
-南京软赫电子科技有限公司内部工具：把工艺数据（YAML）一键渲染为 A4 排版的作业指导书 HTML / PDF。
+把工艺数据（YAML）一键渲染为 A3 排版的作业指导书 HTML / PDF。
 
-- **仓库**：<https://gitee.com/soft-hertz/sop_generate>
-- **克隆**：`git clone https://gitee.com/soft-hertz/sop_generate.git`
+- **仓库**：<<your gitee repo>>
+- **克隆**：`git clone <release.config.json 中 gitee_owner/gitee_repo 对应的 git 地址>`
 
 支持三种使用方式：
 - **CLI**：工程师 / CI 用
@@ -41,7 +41,7 @@ sop_generate/
 ### 0. 克隆
 
 ```bash
-git clone https://gitee.com/soft-hertz/sop_generate.git
+git clone <release.config.json 中 gitee_owner/gitee_repo 对应的 git 地址>
 cd sop_generate
 ```
 
@@ -102,7 +102,7 @@ Claude 会读 SKILL.md，按规范创建 `products/DEMO02.yaml` 并调用 `gen.p
 product:
   model: DEMO01                # 仅字母数字
   name: 演示产品                # 推荐 ≤ 12 汉字
-  company: 南京软赫电子科技有限公司
+  company: 公司名称
   doc_id: SH-ZY-DEMO
   version: A/0
   publish_date: 2026-1-1
