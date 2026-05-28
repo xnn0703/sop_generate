@@ -115,6 +115,11 @@ jobs:
           $tok   = $env:GITEE_TOKEN
           $tag   = '${{ github.ref_name }}'
 
+          # 查发版仓库默认分支（Gitee 默认是 master，不是 main）
+          $repoInfo = Invoke-RestMethod -Uri "$api`?access_token=$tok" -Method Get
+          $defaultBranch = $repoInfo.default_branch
+          Write-Host "发版仓库默认分支：$defaultBranch"
+
           # 删除已存在的同名 release
           try {
             $existing = Invoke-RestMethod -Uri "$api/releases/tags/$tag`?access_token=$tok" -Method Get -ErrorAction Stop
@@ -142,7 +147,7 @@ jobs:
           $payload = @{
             access_token     = $tok
             tag_name         = $tag
-            target_commitish = 'main'
+            target_commitish = $defaultBranch
             name             = $tag
             body             = $bodyText
             prerelease       = $false
