@@ -46,9 +46,7 @@
         </ol>
       </td>
       <td class="pic-cell{% if proc.images | length > 1 %} two-imgs{% endif %}" colspan="5" rowspan="3">
-        {%- if is_cont %}
-        <div class="cont-overlay">（图片见首页）</div>
-        {%- elif proc.images | length > 1 %}
+        {%- if proc.images | length > 1 %}
         <div class="imgs">
           {%- for img in proc.images %}
           <img src="{{ image_base }}/{{ img }}" alt="{{ proc.name }}-{{ loop.index }}">
