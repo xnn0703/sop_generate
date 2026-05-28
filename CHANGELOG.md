@@ -4,6 +4,16 @@
 
 ---
 
+## v1.0.2 — 2026-05-28
+
+- **macOS 自动更新升级为 self-relocation 模式**：updater 启动时把整个 .app 复制到 /tmp 跑，
+  完成后原地替换 .app（不再留隔壁旧目录）；/tmp 副本 30 秒后自动清理
+- macOS 升级体验现在与 Windows 一致：原地替换 → 启动新版本，无残留旧目录
+- 双平台 CI（windows + macOS）：tag 触发时同时构建 .exe 和 .app，分卷上传到同一 Gitee Release
+- 客户端按当前 OS 自动筛选下载对应平台的分卷
+
+---
+
 ## v1.0.1 — 2026-05-28
 
 - 新增**自动更新**机制（独立 updater 子程序 + Gitee Release 增量分发）

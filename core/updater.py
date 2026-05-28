@@ -214,47 +214,30 @@ def apply_update(parts: list[Path], app_dir: Path, tag: str = "",
         if progress:
             progress(f"解压完成，新版位于 {new_root.name}", 1, 1)
 
-        if sys.platform == "darwin":
-            # macOS：移到 app_dir 同级，并把当前用户数据复制过去
-            tag_suffix = f"-{tag}" if tag else ""
-            target_dir = app_dir / f"sop_generate-mac{tag_suffix}"
+        # 通用：原地替换 app_dir 下除 PRESERVE_PATHS 外的所有文件
+        # （macOS 上 updater 已通过 self-relocation 搬到 /tmp 跑，
+        #   所以可以放心删除原 .app；symlinks=True 保留 .app 内部链接）
+        for item in new_root.iterdir():
+            if item.name in PRESERVE_PATHS:
+                continue
+            target = app_dir / item.name
             if progress:
-                progress(f"准备 {target_dir.name}", 0, 1)
-            if target_dir.exists():
-                shutil.rmtree(target_dir)
-            shutil.move(str(new_root), str(target_dir))
-
-            # 复制用户数据（products / assets / output）从当前 app_dir 到新目录
-            for sub in PRESERVE_PATHS:
-                src = app_dir / sub
-                if src.exists():
-                    dst = target_dir / sub
-                    if dst.exists():
-                        shutil.rmtree(dst)
-                    if progress:
-                        progress(f"迁移 {sub}", 0, 1)
-                    shutil.copytree(src, dst)
-
-            new_app = target_dir / "sop_generate.app"
-            return new_app if new_app.exists() else target_dir
-        else:
-            # Windows：原地替换文件（保留 PRESERVE_PATHS）
-            for item in new_root.iterdir():
-                if item.name in PRESERVE_PATHS:
-                    continue
-                target = app_dir / item.name
-                if progress:
-                    progress(f"替换 {item.name}", 0, 1)
-                if target.exists():
-                    if target.is_dir():
-                        shutil.rmtree(target)
-                    else:
-                        target.unlink()
-                if item.is_dir():
-                    shutil.copytree(item, target)
+                progress(f"替换 {item.name}", 0, 1)
+            if target.exists():
+                if target.is_dir():
+                    shutil.rmtree(target)
                 else:
-                    shutil.copy2(item, target)
+                    target.unlink()
+            if item.is_dir():
+                shutil.copytree(item, target, symlinks=True)
+            else:
+                shutil.copy2(item, target, follow_symlinks=False)
 
+        # 返回新主程序路径
+        if sys.platform == "darwin":
+            new_app = app_dir / "sop_generate.app"
+            return new_app if new_app.exists() else app_dir
+        else:
             exe = app_dir / "sop_generate.exe"
             return exe if exe.exists() else app_dir
     finally:

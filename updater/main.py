@@ -15,8 +15,12 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
+import subprocess
 import sys
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -149,12 +153,74 @@ class UpdaterDialog(QDialog):
         QApplication.quit()
 
 
+def _find_enclosing_app(p: Path) -> Path | None:
+    """如果 p 在某个 .app bundle 内部，返回该 .app 的路径，否则 None。"""
+    for parent in (p, *p.parents):
+        if parent.suffix == ".app":
+            return parent
+    return None
+
+
+def _self_relocate_macos(extra_argv: list[str]) -> None:
+    """macOS 专用：检测 updater 在 .app 内部时，把整个 .app 复制到 /tmp 后
+    exec 副本接管，让本进程退出。这样后续替换原 .app 不会自杀。"""
+    exe = Path(sys.executable).resolve()
+    app_root = _find_enclosing_app(exe)
+    if app_root is None:
+        return   # 不在 .app 里（开发态），直接返回继续跑
+
+    # 已经在 /tmp 副本里？避免无限循环
+    if str(app_root).startswith("/tmp/") or str(app_root).startswith("/private/tmp/"):
+        return
+
+    clone_root = Path(tempfile.gettempdir()) / f"sop_updater_clone_{int(time.time())}"
+    clone_root.mkdir(parents=True, exist_ok=True)
+    cloned_app = clone_root / app_root.name
+
+    # 复制整个 .app（含 Contents/MacOS/ 内全部运行时依赖 + Frameworks 等）
+    # symlinks=True 保留 .app 内部的符号链接
+    shutil.copytree(app_root, cloned_app, symlinks=True)
+
+    new_updater = cloned_app / "Contents" / "MacOS" / "updater"
+    if not new_updater.exists():
+        # 安全网：复制失败就放弃 relocate（虽然后续可能自杀）
+        shutil.rmtree(clone_root, ignore_errors=True)
+        return
+
+    # 安排 5 秒后自删除 /tmp 副本（updater 退出后由 sh 异步清理）
+    subprocess.Popen(
+        ["sh", "-c", f"sleep 30 && rm -rf {shlex_quote(str(clone_root))}"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    # 用 execv 替换当前进程（不留旧解释器，原 .app 不再被进程引用）
+    os.execv(str(new_updater), [str(new_updater), *extra_argv, "--no-relocate"])
+
+
+def shlex_quote(s: str) -> str:
+    import shlex
+    return shlex.quote(s)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="sop_generate updater")
     ap.add_argument("--pid", type=int, required=True, help="主程序 PID")
     ap.add_argument("--tag", required=True, help="目标版本 tag，如 v1.1.0")
     ap.add_argument("--app-dir", type=Path, required=True, help="主程序所在目录")
+    ap.add_argument("--no-relocate", action="store_true",
+                    help="（内部使用）跳过 macOS self-relocation；通常不需要手动加")
     args = ap.parse_args()
+
+    # macOS 特殊处理：把自己搬到 /tmp 跑，避免后续替换原 .app 时自杀
+    if sys.platform == "darwin" and not args.no_relocate:
+        extra = [
+            "--pid", str(args.pid),
+            "--tag", args.tag,
+            "--app-dir", str(args.app_dir),
+        ]
+        _self_relocate_macos(extra)
+        # 如果走到这里说明 relocate 跳过了（开发态或已在 /tmp）
 
     app = QApplication(sys.argv)
     dlg = UpdaterDialog(args.pid, args.tag, args.app_dir.resolve())
