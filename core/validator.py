@@ -21,7 +21,7 @@ MAX_MATS             = 4    # 作业材料 项数上限
 MAX_IMAGES           = 2    # 图片张数上限（多图建议拆工序）
 MIN_IMAGES           = 1    # 图片张数下限
 MAX_PROCESSES        = 32   # 工序总数上限（流程图会自动分页）
-PROCESSES_PER_FLOW_PAGE = 15  # 工艺流程图单页最多节点数（A3 纵向可放下）
+PROCESSES_PER_FLOW_PAGE = 10  # 工艺流程图单页最多节点数（A3 纵向，留出超长工序名换行余量）
 
 DATE_RE    = re.compile(r"^\d{4}-\d{1,2}-\d{1,2}$")
 VERSION_RE = re.compile(r"^[A-Z]/\d+$")
