@@ -333,3 +333,111 @@ jobs:
           TAG="${GITHUB_REF##*/}"
           gh release upload "$TAG" dist/sop_generate-mac-${TAG}.7z.* --clobber
           echo "✓ macOS 分卷已追加到 GitHub Release"
+
+  # ===================================================================
+  # 美化 Release 描述（双平台跑完后，按 OS 分组列出下载链接）
+  # ===================================================================
+  finalize-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare-release, windows, macos]
+    runs-on: ubuntu-latest
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
+      RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
+      GITEE_RELEASE_ID:    ${{ needs.prepare-release.outputs.gitee_release_id }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 重新构造分组的 Release 描述 + 同步到 Gitee/GitHub
+        shell: bash
+        run: |
+          set -e
+          TAG="${GITHUB_REF##*/}"
+          OWNER="$RELEASE_GITEE_OWNER"
+          REPO="$RELEASE_GITEE_REPO"
+          API="https://gitee.com/api/v5/repos/${OWNER}/${REPO}"
+          RID="$GITEE_RELEASE_ID"
+
+          # 查发版仓库的 release，拿到所有 attach files
+          curl -s "${API}/releases/${RID}?access_token=${GITEE_TOKEN}" > /tmp/release.json
+          python3 > /tmp/body.md <<'PY'
+          import json, sys
+          import os
+          TAG = os.environ["GITHUB_REF"].split("/")[-1]
+          OWNER = os.environ["RELEASE_GITEE_OWNER"]
+          REPO  = os.environ["RELEASE_GITEE_REPO"]
+
+          with open("/tmp/release.json", "r", encoding="utf-8") as f:
+              rel = json.load(f)
+          assets = rel.get("assets", [])
+
+          def fmt(a):
+              # Gitee 附件下载 URL 通常在 browser_download_url；没有就拼回 path
+              url = a.get("browser_download_url") or a.get("download_url") or ""
+              name = a.get("name", "")
+              size = a.get("size") or 0
+              mb = size / 1024 / 1024
+              return f"- [{name}]({url}) — {mb:.1f} MB"
+
+          win  = sorted([a for a in assets if "sop_generate-win" in a.get("name","")], key=lambda x:x["name"])
+          mac  = sorted([a for a in assets if "sop_generate-mac" in a.get("name","")], key=lambda x:x["name"])
+
+          print(f"# sop_generate {TAG}")
+          print()
+          print(f"> 自动构建。客户端启动会自动检查更新，首次安装请按下方分类选择对应平台的分卷。")
+          print()
+
+          if win:
+              print("## 🪟 Windows 下载")
+              print()
+              print(f"**共 {len(win)} 个分卷**（必须全部下载到同一文件夹）：")
+              print()
+              for a in win: print(fmt(a))
+              print()
+              print("**安装步骤：**")
+              print("1. 把上方所有 .7z.NNN 分卷下载到同一文件夹")
+              print("2. 安装 [7-Zip](https://www.7-zip.org/)")
+              print("3. 右键 `.7z.001` → 7-Zip → 解压到当前位置")
+              print("4. 进入解压后目录，双击 `sop_generate.exe`")
+              print("5. 首次运行 Defender 提示 → \"更多信息 → 仍要运行\"")
+              print()
+
+          if mac:
+              print("## 🍎 macOS 下载")
+              print()
+              print(f"**共 {len(mac)} 个分卷**（必须全部下载到同一文件夹）：")
+              print()
+              for a in mac: print(fmt(a))
+              print()
+              print("**安装步骤：**")
+              print("1. 把上方所有 .7z.NNN 分卷下载到同一文件夹")
+              print("2. 安装 [Keka](https://www.keka.io/) 或 `brew install p7zip`")
+              print("3. 双击 `.7z.001` 解压（Keka）或终端 `7z x sop_generate-mac-*.7z.001`")
+              print("4. 进入解压后目录，双击 `sop_generate.app`")
+              print("5. 首次运行：系统设置 → 隐私与安全性 → 放行 sop_generate.app")
+              print()
+
+          print("---")
+          print()
+          print("> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Win10/11 自带 Edge）。")
+          print("> 启动后会在后台自动检查更新，有新版会弹窗提示。")
+          PY
+          BODY=$(cat /tmp/body.md)
+
+          echo "===== 新的 Release Body ====="
+          echo "$BODY"
+          echo "============================="
+
+          # PATCH Gitee Release body
+          PAYLOAD=$(python3 -c "import json,os; print(json.dumps({'access_token': os.environ['GITEE_TOKEN'], 'body': open('/tmp/body.md').read()}))")
+          curl -s -X PATCH -H "Content-Type: application/json; charset=utf-8" \
+            -d "$PAYLOAD" "${API}/releases/${RID}" > /dev/null
+          echo "✓ Gitee Release body 已更新"
+
+          # 同步到 GitHub Release
+          gh release edit "$TAG" --notes-file /tmp/body.md
+          echo "✓ GitHub Release body 已更新"
