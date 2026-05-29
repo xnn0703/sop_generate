@@ -4,6 +4,20 @@
 
 ---
 
+## v1.0.5 — 2026-05-29
+
+**修复关键 Bug**：Windows 自动更新失败 `PermissionError: [WinError 5] 拒绝访问: updater.exe`
+
+- Windows 上运行中的 .exe 不能被删除（与 Linux/Mac 行为不同）
+- updater.exe 试图替换自己所在目录的文件 → 删自己失败
+- 修复：把之前 macOS 才有的 self-relocation 扩展到 Windows：
+  - 启动时把 updater.exe + _internal/ 复制到 %TEMP%/sop_updater_clone_<ts>/
+  - 从临时目录跑，原 updater.exe 就能被替换
+  - 退出 30 秒后由 cmd 异步清理临时目录
+- v1.0.2 / v1.0.3 / v1.0.4 用户需**手动**重装本版本（旧 updater 无此修复，无法自动跨过这步）
+
+---
+
 ## v1.0.4 — 2026-05-29
 
 **修复关键 Bug**：自动更新解压失败 `UnsupportedCompressionMethodError: BCJ2 filter is not supported by py7zr`

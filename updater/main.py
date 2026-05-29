@@ -161,41 +161,80 @@ def _find_enclosing_app(p: Path) -> Path | None:
     return None
 
 
-def _self_relocate_macos(extra_argv: list[str]) -> None:
-    """macOS 专用：检测 updater 在 .app 内部时，把整个 .app 复制到 /tmp 后
-    exec 副本接管，让本进程退出。这样后续替换原 .app 不会自杀。"""
+def _already_in_temp(p: Path) -> bool:
+    tmp = str(Path(tempfile.gettempdir()).resolve()).lower()
+    sp = str(p.resolve()).lower()
+    # macOS 的 /tmp 实际是 /private/tmp 的符号链接
+    return sp.startswith(tmp) or sp.startswith("/private/tmp/")
+
+
+def _self_relocate(extra_argv: list[str]) -> None:
+    """把 updater 自己（含运行时依赖）搬到临时目录跑，避免后续原地替换时：
+    - Windows: 删除运行中的 updater.exe 失败（WinError 5）
+    - macOS:  删除自己所在的 .app 包失败 / 进程自杀
+    """
     exe = Path(sys.executable).resolve()
-    app_root = _find_enclosing_app(exe)
-    if app_root is None:
-        return   # 不在 .app 里（开发态），直接返回继续跑
+    if _already_in_temp(exe):
+        return  # 已经在临时目录跑，避免无限循环
 
-    # 已经在 /tmp 副本里？避免无限循环
-    if str(app_root).startswith("/tmp/") or str(app_root).startswith("/private/tmp/"):
-        return
-
-    clone_root = Path(tempfile.gettempdir()) / f"sop_updater_clone_{int(time.time())}"
+    tmp_root = Path(tempfile.gettempdir())
+    clone_root = tmp_root / f"sop_updater_clone_{int(time.time())}"
     clone_root.mkdir(parents=True, exist_ok=True)
-    cloned_app = clone_root / app_root.name
 
-    # 复制整个 .app（含 Contents/MacOS/ 内全部运行时依赖 + Frameworks 等）
-    # symlinks=True 保留 .app 内部的符号链接
-    shutil.copytree(app_root, cloned_app, symlinks=True)
+    if sys.platform == "darwin":
+        app_root = _find_enclosing_app(exe)
+        if app_root is None:
+            shutil.rmtree(clone_root, ignore_errors=True)
+            return  # 开发态不在 .app 里
+        cloned_app = clone_root / app_root.name
+        shutil.copytree(app_root, cloned_app, symlinks=True)
+        new_updater = cloned_app / "Contents" / "MacOS" / "updater"
+        cleanup_cmd = ["sh", "-c", f"sleep 30 && rm -rf {shlex_quote(str(clone_root))}"]
+        cleanup_flags = {"start_new_session": True}
 
-    new_updater = cloned_app / "Contents" / "MacOS" / "updater"
-    if not new_updater.exists():
-        # 安全网：复制失败就放弃 relocate（虽然后续可能自杀）
+    elif sys.platform == "win32":
+        # PyInstaller onedir：updater.exe 启动需要同目录的 _internal/ 提供 Python 运行时
+        src_dir = exe.parent
+        internal = src_dir / "_internal"
+        if not internal.exists():
+            shutil.rmtree(clone_root, ignore_errors=True)
+            return  # 开发态
+        # 复制 updater.exe 自身 + _internal/（含 PySide6, py7zr 等运行时）
+        shutil.copy2(exe, clone_root / exe.name)
+        shutil.copytree(internal, clone_root / "_internal")
+        new_updater = clone_root / exe.name
+        cleanup_cmd = [
+            "cmd.exe", "/c",
+            f'timeout /t 30 /nobreak >nul & rmdir /s /q "{clone_root}"',
+        ]
+        cleanup_flags = {"creationflags": 0x08000000}  # CREATE_NO_WINDOW
+
+    else:
         shutil.rmtree(clone_root, ignore_errors=True)
         return
 
-    # 安排 5 秒后自删除 /tmp 副本（updater 退出后由 sh 异步清理）
+    if not new_updater.exists():
+        shutil.rmtree(clone_root, ignore_errors=True)
+        return
+
+    # 排程清理临时目录（updater 自然退出 30 秒后异步删除）
     subprocess.Popen(
-        ["sh", "-c", f"sleep 30 && rm -rf {shlex_quote(str(clone_root))}"],
+        cleanup_cmd,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        start_new_session=True,
+        **cleanup_flags,
     )
 
-    # 用 execv 替换当前进程（不留旧解释器，原 .app 不再被进程引用）
-    os.execv(str(new_updater), [str(new_updater), *extra_argv, "--no-relocate"])
+    # 启动 /tmp 中的副本，原进程退出
+    if sys.platform == "win32":
+        subprocess.Popen(
+            [str(new_updater), *extra_argv, "--no-relocate"],
+            creationflags=0x00000008,  # DETACHED_PROCESS
+            close_fds=True,
+        )
+        sys.exit(0)
+    else:
+        # POSIX: execv 替换当前进程映像
+        os.execv(str(new_updater), [str(new_updater), *extra_argv, "--no-relocate"])
 
 
 def shlex_quote(s: str) -> str:
@@ -209,18 +248,18 @@ def main() -> int:
     ap.add_argument("--tag", required=True, help="目标版本 tag，如 v1.1.0")
     ap.add_argument("--app-dir", type=Path, required=True, help="主程序所在目录")
     ap.add_argument("--no-relocate", action="store_true",
-                    help="（内部使用）跳过 macOS self-relocation；通常不需要手动加")
+                    help="（内部使用）跳过 self-relocation；通常不需要手动加")
     args = ap.parse_args()
 
-    # macOS 特殊处理：把自己搬到 /tmp 跑，避免后续替换原 .app 时自杀
-    if sys.platform == "darwin" and not args.no_relocate:
+    # Windows + macOS：把自己搬到临时目录跑，避免后续原地替换时自杀
+    if sys.platform in ("darwin", "win32") and not args.no_relocate:
         extra = [
             "--pid", str(args.pid),
             "--tag", args.tag,
             "--app-dir", str(args.app_dir),
         ]
-        _self_relocate_macos(extra)
-        # 如果走到这里说明 relocate 跳过了（开发态或已在 /tmp）
+        _self_relocate(extra)
+        # 走到这里说明 relocate 跳过了（开发态或已在 /tmp）
 
     app = QApplication(sys.argv)
     dlg = UpdaterDialog(args.pid, args.tag, args.app_dir.resolve())
