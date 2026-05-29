@@ -117,38 +117,88 @@ def is_newer(remote_tag: str, local_version: str) -> bool:
 # =================================================================
 # 3. 下载
 # =================================================================
+def _download_one(url: str, out: Path, max_retry: int = 4,
+                  progress: ProgressCb | None = None,
+                  total_so_far_callback=None) -> int:
+    """下载单个文件，含重试 + Content-Length 大小校验。
+
+    返回实际写入的字节数。任何阶段失败会自动重试，全部重试失败抛 RuntimeError。
+    """
+    last_err: Exception | None = None
+    for attempt in range(1, max_retry + 1):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "sop_generate-updater"})
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                cl = resp.headers.get("Content-Length")
+                expected = int(cl) if cl and cl.isdigit() else None
+                written = 0
+                with open(out, "wb") as f:
+                    while True:
+                        chunk = resp.read(1024 * 64)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        written += len(chunk)
+                        if progress and total_so_far_callback:
+                            progress(f"下载 {out.name}", *total_so_far_callback(written))
+
+            # 大小校验
+            actual = out.stat().st_size
+            if expected is not None and actual != expected:
+                raise RuntimeError(
+                    f"{out.name} 下载不完整：实际 {actual} 字节，"
+                    f"服务器 Content-Length 声明 {expected} 字节"
+                )
+            return actual
+        except Exception as e:
+            last_err = e
+            try:
+                if out.exists():
+                    out.unlink()
+            except OSError:
+                pass
+            if attempt < max_retry:
+                time.sleep(min(2 ** attempt, 10))
+                continue
+    raise RuntimeError(f"{out.name} 下载失败（重试 {max_retry} 次）：{last_err}")
+
+
 def download_release(release: ReleaseInfo, target_dir: Path,
                      progress: ProgressCb | None = None) -> list[Path]:
-    """把所有 .7z 分卷下载到 target_dir，返回本地文件路径列表。"""
+    """把所有 .7z 分卷下载到 target_dir，返回本地文件路径列表。
+
+    单个分卷失败自动重试 4 次（指数退避），全部下载完成后做大小校验。
+    """
     target_dir.mkdir(parents=True, exist_ok=True)
     parts = release.archive_parts
     if not parts:
         raise RuntimeError(f"Release {release.tag} 未包含 .7z 分卷附件")
 
+    # 总字节数（assets size 字段可能缺失）
     total_bytes = sum(p.get("size") or 0 for p in parts)
-    downloaded = 0
+    total_done = 0
     local_files: list[Path] = []
 
     for asset in parts:
         url = asset["browser_download_url"]
         out = target_dir / asset["name"]
-        if out.exists() and out.stat().st_size == (asset.get("size") or -1):
-            downloaded += out.stat().st_size
+        expected_size = asset.get("size") or 0
+
+        # 已存在且大小一致就跳过
+        if out.exists() and expected_size > 0 and out.stat().st_size == expected_size:
+            total_done += out.stat().st_size
             local_files.append(out)
             if progress:
-                progress(f"已存在 {asset['name']}", downloaded, total_bytes)
+                progress(f"已存在 {asset['name']}", total_done, total_bytes)
             continue
 
-        req = urllib.request.Request(url, headers={"User-Agent": "sop_generate-updater"})
-        with urllib.request.urlopen(req, timeout=60) as resp, open(out, "wb") as f:
-            while True:
-                chunk = resp.read(1024 * 64)
-                if not chunk:
-                    break
-                f.write(chunk)
-                downloaded += len(chunk)
-                if progress:
-                    progress(f"下载 {asset['name']}", downloaded, total_bytes)
+        start_done = total_done
+
+        def cb(written: int, _start=start_done) -> tuple[int, int]:
+            return (_start + written, total_bytes)
+
+        written = _download_one(url, out, progress=progress, total_so_far_callback=cb)
+        total_done = start_done + written
         local_files.append(out)
 
     return local_files
@@ -200,6 +250,16 @@ def apply_update(parts: list[Path], app_dir: Path, tag: str = "",
 
     try:
         merged = _merge_parts(parts, staging / "merged.7z", progress)
+
+        # 7z 魔数校验，提前发现下载/合并出问题
+        with open(merged, "rb") as f:
+            magic = f.read(6)
+        if magic != b"\x37\x7a\xbc\xaf\x27\x1c":
+            raise RuntimeError(
+                f"合并后的 7z 文件头错误（魔数 {magic.hex()}，应为 377abcaf271c）。"
+                f"可能某个分卷下载不完整或损坏，请重新启动程序重试更新。"
+            )
+
         _extract_7z(merged, staging, progress)
         try:
             merged.unlink()
