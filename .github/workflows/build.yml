@@ -352,6 +352,38 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
+      - name: 清理旧 Gitee Release（保留最近 3 个版本，避免配额超限）
+        shell: bash
+        run: |
+          set -e
+          OWNER="$RELEASE_GITEE_OWNER"
+          REPO="$RELEASE_GITEE_REPO"
+          API="https://gitee.com/api/v5/repos/${OWNER}/${REPO}"
+
+          # 拿到所有 release（按创建时间倒序），保留最新 3 个，删除剩余
+          curl -s "${API}/releases?per_page=100&access_token=${GITEE_TOKEN}" > /tmp/all_releases.json
+          python3 <<'PY'
+          import json, os, subprocess
+          KEEP = 3
+          API = f"https://gitee.com/api/v5/repos/{os.environ['RELEASE_GITEE_OWNER']}/{os.environ['RELEASE_GITEE_REPO']}"
+          TOKEN = os.environ['GITEE_TOKEN']
+          with open("/tmp/all_releases.json") as f:
+              rels = json.load(f)
+          # 按 created_at 倒序
+          rels.sort(key=lambda r: r['created_at'], reverse=True)
+          to_keep = rels[:KEEP]
+          to_delete = rels[KEEP:]
+          print(f"共 {len(rels)} 个 release，保留最新 {len(to_keep)} 个，删除 {len(to_delete)} 个")
+          for r in to_keep:
+              print(f"  保留: {r['tag_name']} (id={r['id']})")
+          for r in to_delete:
+              print(f"  删除: {r['tag_name']} (id={r['id']})")
+              subprocess.run([
+                  "curl", "-s", "-X", "DELETE",
+                  f"{API}/releases/{r['id']}?access_token={TOKEN}"
+              ], check=False)
+          PY
+
       - name: 重新构造分组的 Release 描述 + 同步到 Gitee/GitHub
         shell: bash
         run: |
