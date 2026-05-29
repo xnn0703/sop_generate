@@ -158,7 +158,10 @@ jobs:
             echo 导出 PDF 需本机已装 Edge 或 Chrome。
             echo _internal\ 文件夹不可删除。
             echo 启动后会在后台检查更新，如有新版会弹窗提示。
+            echo.
+            echo 详细操作说明：用浏览器打开 使用说明.html
           ) > dist\sop_generate-win\使用说明.txt
+          copy docs\使用说明.html dist\sop_generate-win\使用说明.html
 
       - name: 上传 GitHub Artifact
         uses: actions/upload-artifact@v4
@@ -281,7 +284,10 @@ jobs:
           【数据目录】products / assets/images / output 都在 .app 同级
           【导出 PDF】需装 Microsoft Edge 或 Google Chrome
           【自动更新】启动后台会检查更新，有新版弹窗提示
+
+          【详细操作说明】用浏览器打开 使用说明.html
           TXT
+          cp docs/使用说明.html "$RELEASE/使用说明.html"
 
       - name: 上传 GitHub Artifact
         uses: actions/upload-artifact@v4
