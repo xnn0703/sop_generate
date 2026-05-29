@@ -1,0 +1,176 @@
+product:
+  model: DEMO01
+  name: 演示产品
+  company: 公司名称
+  doc_id: DOC-XX-001
+  version: A/0
+  publish_date: 2026-1-1
+  effective_date: 2026-1-15
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+processes:
+- name: 测试工序一
+  key: false
+  operations:
+  - 第一步：示例操作步骤一
+  - 第二步：示例操作步骤二
+  notes:
+  - 示例注意事项一
+  - 示例注意事项二
+  images:
+  - step01.png
+  tools:
+  - 测试工具 A
+  - 测试工具 B
+  materials:
+  - 测试材料 A
+  - 测试材料 B
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序二（双图）
+  key: false
+  operations:
+  - 演示双图布局
+  - 双图自动上下排列
+  notes:
+  - 双图模式下两张图各占一半区域
+  images:
+  - step02.png
+  - step03.png
+  tools:
+  - 测试工具 C
+  materials:
+  - 测试材料 C
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序 2.5（四图）
+  key: false
+  operations:
+  - 演示四图 2×2 网格布局
+  - 每张图自动缩放至格子大小
+  notes:
+  - 3-4 张图会自动 2×2 排列
+  images:
+  - step01.png
+  - step02.png
+  - step03.png
+  - step04.png
+  tools:
+  - 测试工具 X
+  materials:
+  - 测试材料 X
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序三
+  key: true
+  operations:
+  - 演示关键工序（★ 标记）
+  - 关键工序会在封面、目录、流程图加红色 ★
+  notes:
+  - 关键工序需特别注意
+  images:
+  - step04.png
+  tools:
+  - 测试工具 D
+  materials:
+  - 测试材料 D
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序四
+  key: false
+  operations:
+  - 普通工序示例
+  notes:
+  - 注意事项可空
+  images:
+  - step05.png
+  tools:
+  - 测试工具 E
+  materials:
+  - 测试材料 E
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序五
+  key: false
+  operations:
+  - 演示工序五
+  notes: []
+  images:
+  - step06.png
+  tools:
+  - 测试工具 F
+  materials:
+  - 测试材料 F
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序六
+  key: false
+  operations:
+  - 演示工序六
+  notes: []
+  images:
+  - step07.png
+  tools:
+  - 测试工具 G
+  materials:
+  - 测试材料 G
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序七
+  key: true
+  operations:
+  - 第二个关键工序
+  notes:
+  - 关键工序需特别注意
+  images:
+  - step08.png
+  tools:
+  - 测试工具 H
+  materials:
+  - 测试材料 H
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'
+- name: 测试工序八
+  key: false
+  operations:
+  - 收尾工序示例
+  notes:
+  - '1234'
+  images:
+  - step09.png
+  tools:
+  - 测试工具 I
+  materials:
+  - 测试材料 I
+  _meta:
+    created_by: 徐亚彬
+    created_at: '2026-05-29T20:06:22'
+    last_modified_by: 徐亚彬
+    last_modified_at: '2026-05-29T20:06:22'

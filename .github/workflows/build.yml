@@ -148,8 +148,7 @@ jobs:
           if exist dist\sop_generate-win rmdir /s /q dist\sop_generate-win
           move dist\sop_generate dist\sop_generate-win
           mkdir dist\sop_generate-win\output
-          xcopy /e /i /y products dist\sop_generate-win\products
-          xcopy /e /i /y assets\images dist\sop_generate-win\assets\images
+          xcopy /e /i /y sop_packages dist\sop_generate-win\sop_packages
           (
             echo sop_generate · 作业指导书生成器
             echo ================================
@@ -162,6 +161,7 @@ jobs:
             echo 详细操作说明：用浏览器打开 使用说明.html
           ) > dist\sop_generate-win\使用说明.txt
           copy docs\使用说明.html dist\sop_generate-win\使用说明.html
+          if exist docs\images xcopy /e /i /y docs\images dist\sop_generate-win\images
 
       - name: 上传 GitHub Artifact
         uses: actions/upload-artifact@v4
@@ -270,10 +270,9 @@ jobs:
         run: |
           TAG="${GITHUB_REF##*/}"
           RELEASE="dist/sop_generate-mac-${TAG}"
-          mkdir -p "$RELEASE/products" "$RELEASE/assets/images" "$RELEASE/output"
+          mkdir -p "$RELEASE/sop_packages" "$RELEASE/output"
           mv dist/sop_generate.app "$RELEASE/"
-          cp -r products/* "$RELEASE/products/" 2>/dev/null || true
-          cp -r assets/images/* "$RELEASE/assets/images/" 2>/dev/null || true
+          cp -r sop_packages/* "$RELEASE/sop_packages/" 2>/dev/null || true
           cat > "$RELEASE/使用说明.txt" <<'TXT'
           sop_generate · 作业指导书生成器
           ================================
@@ -288,6 +287,7 @@ jobs:
           【详细操作说明】用浏览器打开 使用说明.html
           TXT
           cp docs/使用说明.html "$RELEASE/使用说明.html"
+          [ -d docs/images ] && cp -r docs/images "$RELEASE/images" || true
 
       - name: 上传 GitHub Artifact
         uses: actions/upload-artifact@v4

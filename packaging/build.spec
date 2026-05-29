@@ -24,7 +24,7 @@ block_cipher = None
 # ===== 共享数据 =====
 shared_datas = [
     (str(PROJECT_ROOT / "templates"), "templates"),
-    (str(PROJECT_ROOT / "products" / "_schema.yaml"), "products"),
+    (str(PROJECT_ROOT / "sop_packages" / "_schema.yaml"), "sop_packages"),
     (str(PROJECT_ROOT / "release.config.json"), "."),
 ]
 

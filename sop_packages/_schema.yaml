@@ -1,0 +1,55 @@
+# =============================================================
+# sop_generate · YAML 字段规范（v1.1.0+）
+# =============================================================
+# 实际产品在 sop_packages/<MODEL>/product.yaml
+# 每个 SOP 工程包目录结构：
+#   sop_packages/<MODEL>/
+#   ├── product.yaml
+#   ├── images/
+#   └── output/
+
+# -------- 字段规范（v1.1.0 起无数量硬限制，超出自动分页） --------
+# product.model:            必填，仅字母数字/下划线/横线
+# product.name:             必填
+# product.company:          必填
+# product.doc_id:           必填
+# product.version:          必填，形如 A/0、B/1
+# product.publish_date:     必填，YYYY-M-D
+# product.effective_date:   必填，YYYY-M-D
+# product._meta:            自动维护（created_by/at, last_modified_by/at）
+#
+# processes:                必填，1+ 项；流程图每 8 个工序自动分页
+#   - name:                 必填
+#     key:                  布尔，true 标记关键工序（★）
+#     operations:           必填，单页 6 条；超出自动分页
+#     notes:                可选，单页 4 条；超出自动分页
+#     images:               必填，单页 4 张（1 全占 / 2 上下 / 3-4 2×2）；超出自动分页
+#     tools:                可选，单页 4 项；超出自动分页
+#     materials:            可选，单页 4 项；超出自动分页
+#     _meta:                自动维护
+
+# -------- 示例 --------
+example:
+  product:
+    model: DEMO01
+    name: 演示产品
+    company: 公司名称
+    doc_id: DOC-XX-001
+    version: A/0
+    publish_date: 2026-1-1
+    effective_date: 2026-1-15
+
+  processes:
+    - name: 示例工序
+      key: true
+      operations:
+        - 第一步：取一个零件
+        - 第二步：装到对应位置
+      notes:
+        - 注意佩戴防静电手环
+      images:
+        - 示例工序.png
+      tools:
+        - 螺丝刀
+      materials:
+        - M3×6 螺钉

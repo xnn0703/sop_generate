@@ -1,15 +1,26 @@
-"""GUI 的数据模型层 — 封装 YAML 增删改查"""
+"""GUI 的数据模型层 — 封装 SOP 工程包的增删改查
+
+v1.1.0 新结构：每个 SOP 一个独立工程文件夹
+    sop_packages/<model>/
+    ├── product.yaml      （含 _meta 修改追溯）
+    ├── images/
+    └── output/
+"""
 from __future__ import annotations
 
 import copy
 import shutil
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from core.paths import IMAGES_DIR, PRODUCTS_DIR  # noqa: F401
+from core.paths import (
+    SOP_PACKAGES_DIR, sop_package_dir, sop_yaml_path, sop_images_dir,
+    sop_output_dir,
+)
 
 DEFAULT_PRODUCT = {
     "model": "",
@@ -32,43 +43,145 @@ DEFAULT_PROCESS = {
 }
 
 
+def _now_iso() -> str:
+    return datetime.now().replace(microsecond=0).isoformat()
+
+
+def _ensure_meta(d: dict, user: str) -> dict:
+    """确保 dict 含 _meta 字段并填好创建信息。返回 _meta dict。"""
+    if "_meta" not in d:
+        d["_meta"] = {
+            "created_by": user,
+            "created_at": _now_iso(),
+            "last_modified_by": user,
+            "last_modified_at": _now_iso(),
+        }
+    return d["_meta"]
+
+
+def _update_modified(d: dict, user: str) -> None:
+    meta = _ensure_meta(d, user)
+    meta["last_modified_by"] = user
+    meta["last_modified_at"] = _now_iso()
+
+
+def _strip_meta_for_compare(d: dict) -> dict:
+    """剥离 _meta 字段后用于比较两个版本是否真有改动。"""
+    out = {k: v for k, v in d.items() if k != "_meta"}
+    return out
+
+
 @dataclass
 class Product:
-    path: Path
+    """一个 SOP 产品（对应 sop_packages/<model>/）"""
+    model: str
     product: dict[str, Any] = field(default_factory=lambda: copy.deepcopy(DEFAULT_PRODUCT))
     processes: list[dict[str, Any]] = field(default_factory=list)
+    _snapshot: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
+
+    @property
+    def path(self) -> Path:
+        return sop_yaml_path(self.model)
+
+    @property
+    def package_dir(self) -> Path:
+        return sop_package_dir(self.model)
+
+    @property
+    def image_dir(self) -> Path:
+        return sop_images_dir(self.model)
+
+    @property
+    def output_dir(self) -> Path:
+        return sop_output_dir(self.model)
 
     @classmethod
-    def load(cls, path: Path) -> Product:
-        with open(path, "r", encoding="utf-8") as f:
+    def load(cls, model_or_path) -> Product:
+        """从型号名或 product.yaml 路径加载。"""
+        if isinstance(model_or_path, Path):
+            yaml_path = model_or_path
+            # 从路径推断 model
+            if yaml_path.name == "product.yaml":
+                model = yaml_path.parent.name
+            else:
+                # 兼容 v1.0.x: products/XESA01.yaml
+                model = yaml_path.stem
+        else:
+            model = model_or_path
+            yaml_path = sop_yaml_path(model)
+
+        if not yaml_path.exists():
+            raise FileNotFoundError(f"SOP 工程文件不存在: {yaml_path}")
+
+        with open(yaml_path, "r", encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
-        return cls(
-            path=path,
+
+        prod = cls(
+            model=model,
             product=raw.get("product", copy.deepcopy(DEFAULT_PRODUCT)),
             processes=raw.get("processes", []),
         )
+        # 记快照用于"是否修改"判定
+        prod._snapshot = copy.deepcopy(raw)
+        return prod
 
-    def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+    def save(self, current_user: str) -> None:
+        """保存到磁盘，并按需更新 _meta 修改追溯字段。
+
+        策略：对比 _snapshot 和当前数据，只更新真正改动过的段的 _meta。
+        """
+        if not current_user:
+            raise ValueError("用户名未设置，无法保存")
+
+        # ===== 比较 product 段 =====
+        snap_product = self._snapshot.get("product", {})
+        cur_product = self.product
+        # 比较时剥离 _meta
+        if _strip_meta_for_compare(cur_product) != _strip_meta_for_compare(snap_product):
+            _update_modified(cur_product, current_user)
+        elif "_meta" not in cur_product:
+            # 即使没改也补全 _meta（首次保存）
+            _ensure_meta(cur_product, current_user)
+
+        # ===== 比较各工序 =====
+        snap_procs = self._snapshot.get("processes", [])
+        # 用 (index, name) 作为对应键不可靠（顺序可拖动）；
+        # 简单策略：按 index 对位比较，超过的算新增
+        for i, proc in enumerate(self.processes):
+            snap = snap_procs[i] if i < len(snap_procs) else None
+            if snap is None:
+                # 新增的工序
+                _ensure_meta(proc, current_user)
+                _update_modified(proc, current_user)
+            else:
+                if _strip_meta_for_compare(proc) != _strip_meta_for_compare(snap):
+                    _update_modified(proc, current_user)
+                elif "_meta" not in proc:
+                    # 复制原 _meta 或新建
+                    proc["_meta"] = snap.get("_meta") or {
+                        "created_by": current_user,
+                        "created_at": _now_iso(),
+                        "last_modified_by": current_user,
+                        "last_modified_at": _now_iso(),
+                    }
+
+        # ===== 写文件 =====
+        self.package_dir.mkdir(parents=True, exist_ok=True)
+        self.image_dir.mkdir(parents=True, exist_ok=True)
         data = {"product": self.product, "processes": self.processes}
         with open(self.path, "w", encoding="utf-8") as f:
             yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False,
                            default_flow_style=False, width=120)
 
-    @property
-    def model(self) -> str:
-        return self.product.get("model", "")
-
-    @property
-    def image_dir(self) -> Path:
-        return IMAGES_DIR / self.model
+        # 更新快照
+        self._snapshot = copy.deepcopy(data)
 
     def ensure_image_dir(self) -> Path:
         self.image_dir.mkdir(parents=True, exist_ok=True)
         return self.image_dir
 
     def import_image(self, src: Path) -> str:
-        """复制图片到当前产品图片目录，返回文件名。"""
+        """复制图片到本 SOP 工程的 images 目录。"""
         self.ensure_image_dir()
         dst = self.image_dir / src.name
         if not dst.exists():
@@ -79,37 +192,64 @@ class Product:
         return {"product": self.product, "processes": self.processes}
 
 
-def list_products() -> list[Path]:
-    """列出 products/ 下所有 yaml（排除 _schema.yaml）。"""
-    PRODUCTS_DIR.mkdir(parents=True, exist_ok=True)
-    return sorted(
-        p for p in PRODUCTS_DIR.glob("*.yaml")
-        if not p.name.startswith("_")
-    )
+def list_products() -> list[str]:
+    """返回所有 SOP 工程包的 model 名（按字母排序）。"""
+    SOP_PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
+    out: list[str] = []
+    for d in sorted(SOP_PACKAGES_DIR.iterdir()):
+        if d.is_dir() and (d / "product.yaml").exists() and not d.name.startswith("_"):
+            out.append(d.name)
+    return out
 
 
 def new_product(model: str) -> Product:
-    """创建新产品 YAML 骨架，返回 Product 对象（未保存）。"""
-    path = PRODUCTS_DIR / f"{model}.yaml"
+    """创建新 SOP 工程包骨架，返回 Product 对象（未保存）。"""
+    if (SOP_PACKAGES_DIR / model).exists():
+        raise ValueError(f"产品 {model} 已存在")
     product = copy.deepcopy(DEFAULT_PRODUCT)
     product["model"] = model
-    return Product(path=path, product=product, processes=[])
+    p = Product(model=model, product=product, processes=[])
+    return p
+
+
+def delete_product(model: str) -> Path:
+    """删除整个 SOP 工程包目录。
+    返回被删除目录的父级（成功标识）。如果 model 不存在抛 FileNotFoundError。
+    """
+    pkg = sop_package_dir(model)
+    if not pkg.exists() or not pkg.is_dir():
+        raise FileNotFoundError(f"SOP 工程不存在：{pkg}")
+    shutil.rmtree(pkg)
+    return pkg.parent
+
+
+def clone_product(src: Product, new_model: str) -> Product:
+    """基于现有产品派生新产品（保留工序结构，清空图片，清空 _meta）。"""
+    if (SOP_PACKAGES_DIR / new_model).exists():
+        raise ValueError(f"产品 {new_model} 已存在")
+    new_prod = copy.deepcopy(src.product)
+    new_prod["model"] = new_model
+    new_prod.pop("_meta", None)
+    new_procs = copy.deepcopy(src.processes)
+    for p in new_procs:
+        p["images"] = []
+        p.pop("_meta", None)
+    return Product(model=new_model, product=new_prod, processes=new_procs)
 
 
 def import_legacy(src_dir: Path) -> dict[str, list[str]]:
-    """从老版本/外部目录导入产品 YAML + 图片。
+    """从 v1.0.x 目录（含 products/ 和 assets/images/）导入到新结构 sop_packages/。
 
-    src_dir 兼容两种结构：
+    兼容两种结构：
       - 老 sop_generate-win/（含 products/ + assets/images/）
       - 直接传 products/ 目录（图片须用户单独放）
 
-    重名 YAML 默认跳过（不覆盖用户当前数据）；同名图片同样跳过。
-    返回字典：imported_yaml / imported_images / skipped_yaml / skipped_images。
+    返回：imported / skipped 列表。
     """
     if not src_dir.exists():
         raise ValueError(f"目录不存在：{src_dir}")
 
-    # 定位 products / images
+    # 定位老的 products / images
     if (src_dir / "products").is_dir():
         src_products = src_dir / "products"
         src_images   = src_dir / "assets" / "images"
@@ -122,51 +262,42 @@ def import_legacy(src_dir: Path) -> dict[str, list[str]]:
             "或直接选 products 目录。"
         )
 
-    imported_yaml: list[str] = []
-    skipped_yaml: list[str]  = []
-    PRODUCTS_DIR.mkdir(parents=True, exist_ok=True)
+    imported: list[str] = []
+    skipped:  list[str] = []
+    img_count = 0
+    img_skipped = 0
+
+    SOP_PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
     for yaml_file in sorted(src_products.glob("*.yaml")):
         if yaml_file.name.startswith("_"):
-            continue  # 跳过 _schema.yaml 等内部文件
-        dst = PRODUCTS_DIR / yaml_file.name
-        if dst.exists():
-            skipped_yaml.append(yaml_file.name)
             continue
-        shutil.copy2(yaml_file, dst)
-        imported_yaml.append(yaml_file.name)
+        model = yaml_file.stem
+        pkg_dir = SOP_PACKAGES_DIR / model
+        if pkg_dir.exists():
+            skipped.append(model)
+            continue
 
-    imported_images: list[str] = []
-    skipped_images: list[str]  = []
-    if src_images.is_dir():
-        for model_dir in sorted(src_images.iterdir()):
-            if not model_dir.is_dir():
-                continue
-            dst_model = IMAGES_DIR / model_dir.name
-            dst_model.mkdir(parents=True, exist_ok=True)
-            for img in sorted(model_dir.iterdir()):
-                if not img.is_file():
-                    continue
-                dst_img = dst_model / img.name
-                if dst_img.exists():
-                    skipped_images.append(f"{model_dir.name}/{img.name}")
-                    continue
-                shutil.copy2(img, dst_img)
-                imported_images.append(f"{model_dir.name}/{img.name}")
+        pkg_dir.mkdir(parents=True, exist_ok=True)
+        (pkg_dir / "images").mkdir(exist_ok=True)
+        # 复制 YAML
+        shutil.copy2(yaml_file, pkg_dir / "product.yaml")
+
+        # 复制图片
+        old_img_dir = src_images / model if src_images.is_dir() else None
+        if old_img_dir and old_img_dir.is_dir():
+            for img in sorted(old_img_dir.iterdir()):
+                if img.is_file():
+                    dst = pkg_dir / "images" / img.name
+                    if dst.exists():
+                        img_skipped += 1
+                        continue
+                    shutil.copy2(img, dst)
+                    img_count += 1
+        imported.append(model)
 
     return {
-        "imported_yaml":  imported_yaml,
-        "imported_images": imported_images,
-        "skipped_yaml":   skipped_yaml,
-        "skipped_images": skipped_images,
+        "imported_products":  imported,
+        "skipped_products":   skipped,
+        "imported_images":    [str(img_count)],
+        "skipped_images":     [str(img_skipped)],
     }
-
-
-def clone_product(src: Product, new_model: str) -> Product:
-    """基于现有产品派生新产品（保留工序结构，清空图片）。"""
-    new_path = PRODUCTS_DIR / f"{new_model}.yaml"
-    new_prod = copy.deepcopy(src.product)
-    new_prod["model"] = new_model
-    new_procs = copy.deepcopy(src.processes)
-    for p in new_procs:
-        p["images"] = []  # 提示用户重新选图
-    return Product(path=new_path, product=new_prod, processes=new_procs)

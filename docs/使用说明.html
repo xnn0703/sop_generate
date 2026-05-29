@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>sop_generate 使用说明 · 标准化作业指导书生成器</title>
+<title>SOP Generate 使用说明 · 标准化作业指导书生成器</title>
 <style>
   :root {
     --primary: #1846b0;
@@ -17,7 +17,6 @@
     --code-bg: #f0f2f5;
     --sidebar-w: 260px;
   }
-
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -27,8 +26,6 @@
     color: var(--text);
     background: var(--bg);
   }
-
-  /* ===== 侧边导航 ===== */
   .sidebar {
     position: fixed;
     top: 0; left: 0; bottom: 0;
@@ -76,15 +73,11 @@
     letter-spacing: 1.5px;
     font-weight: bold;
   }
-
-  /* ===== 主内容区 ===== */
   .content {
     margin-left: var(--sidebar-w);
     padding: 40px 56px 80px;
     max-width: 980px;
   }
-
-  /* ===== 标题 ===== */
   h1, h2, h3, h4 { color: var(--text); font-weight: 700; }
   h1 {
     font-size: 36px; margin: 0 0 8px;
@@ -104,15 +97,11 @@
     font-size: 17px; margin: 24px 0 10px;
     color: #2e3a4d;
   }
-
-  /* ===== 引言 ===== */
   .lead {
     font-size: 18px;
     color: var(--muted);
     margin: 0 0 32px;
   }
-
-  /* ===== 卡片 ===== */
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -121,8 +110,6 @@
     margin: 20px 0;
     box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   }
-
-  /* ===== 提示框 ===== */
   .tip, .warn, .info, .danger {
     border-left: 4px solid;
     padding: 14px 18px;
@@ -139,7 +126,6 @@
   .warn::before   { content: "⚠️  注意  "; font-weight: bold; color: #e67e00; }
   .danger::before { content: "🚨 警告  "; font-weight: bold; color: var(--warn); }
 
-  /* ===== 步骤列表 ===== */
   ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
   ol.steps > li {
     counter-increment: step;
@@ -164,7 +150,6 @@
     font-size: 14px;
   }
 
-  /* ===== 表格 ===== */
   table {
     width: 100%; border-collapse: collapse;
     margin: 20px 0; background: #fff;
@@ -183,7 +168,6 @@
   }
   tbody tr:nth-child(even) { background: #fafbfc; }
 
-  /* ===== 代码 ===== */
   code {
     background: var(--code-bg);
     padding: 2px 7px;
@@ -204,7 +188,6 @@
   }
   pre code { background: none; padding: 0; color: inherit; }
 
-  /* ===== 键盘按键 ===== */
   kbd {
     display: inline-block;
     background: #fff;
@@ -217,7 +200,6 @@
     box-shadow: 0 1px 0 rgba(0,0,0,0.04);
   }
 
-  /* ===== ASCII 截图框 ===== */
   .mock {
     background: #fff;
     border: 1px solid var(--border);
@@ -241,10 +223,8 @@
     padding-bottom: 4px;
   }
 
-  /* ===== 章节锚点偏移 ===== */
   section { scroll-margin-top: 24px; }
 
-  /* ===== 工序图示 ===== */
   .layout-demo {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -258,26 +238,8 @@
     background: #fff;
     text-align: center;
   }
-  .layout-demo .item .pic-block {
-    background: #4a6ebd;
-    color: white;
-    padding: 8px;
-    font-size: 11px;
-    border-radius: 3px;
-    margin: 4px 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .layout-demo .item .pic-1   { height: 80px; }
-  .layout-demo .item .pic-2-grid { display: grid; gap: 4px; height: 80px; }
-  .layout-demo .item .pic-2-grid > div { background: #4a6ebd; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 2px; }
-  .layout-demo .item .pic-2-rows { grid-template-rows: 1fr 1fr; }
-  .layout-demo .item .pic-2x2   { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-  .layout-demo .item .pic-3 > div:nth-child(3) { grid-column: span 2; }
   .layout-demo .item .caption { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
-  /* ===== 顶部进度条占位 ===== */
   .toc-top {
     background: var(--card);
     border: 1px solid var(--border);
@@ -291,7 +253,6 @@
   .toc-top a { color: var(--text); text-decoration: none; }
   .toc-top a:hover { color: var(--primary); text-decoration: underline; }
 
-  /* ===== 颜色徽章 ===== */
   .badge {
     display: inline-block;
     padding: 2px 10px;
@@ -305,7 +266,6 @@
   .badge-grey  { background: #e8eaed; color: #555; }
   .badge-orange{ background: #ffe8cc; color: #b35900; }
 
-  /* ===== 工具栏按钮可视化 ===== */
   .tb-btn {
     display: inline-block;
     background: #2c3849;
@@ -317,11 +277,35 @@
     margin: 0 3px;
   }
 
-  /* ===== 字段长度对比图 ===== */
-  .field-table th:first-child,
-  .field-table td:first-child { white-space: nowrap; }
+  .screenshot {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: block;
+    margin: 16px auto;
+  }
+  .screenshot-caption {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: -4px;
+    margin-bottom: 24px;
+  }
 
-  /* ===== 打印 ===== */
+  .dl-link {
+    display: inline-block;
+    background: var(--primary);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    margin: 6px 0;
+    font-size: 14px;
+  }
+  .dl-link:hover { background: #143a93; }
+
   @media print {
     .sidebar { display: none; }
     .content { margin-left: 0; padding: 20px; max-width: none; }
@@ -329,8 +313,6 @@
     h2:first-of-type { page-break-before: auto; }
     pre, .mock, .card, table { page-break-inside: avoid; }
   }
-
-  /* ===== 响应式 ===== */
   @media (max-width: 900px) {
     .sidebar {
       position: relative;
@@ -347,10 +329,9 @@
 </head>
 <body>
 
-<!-- ============================== 侧边导航 ============================== -->
 <aside class="sidebar">
   <div class="logo">
-    <div class="name">sop_generate</div>
+    <div class="name">SOP Generate</div>
     <div class="sub">作业指导书生成器 · 使用说明</div>
   </div>
   <nav>
@@ -358,36 +339,43 @@
     <ul>
       <li><a href="#intro">1. 软件简介</a></li>
       <li><a href="#install">2. 安装指南</a></li>
-      <li><a href="#quickstart">3. 5 分钟上手</a></li>
+      <li><a href="#user-setup">3. 首次启动 · 用户名</a></li>
+      <li><a href="#quickstart">4. 5 分钟上手</a></li>
     </ul>
     <div class="section-title">界面与操作</div>
     <ul>
-      <li><a href="#ui">4. 主界面介绍</a></li>
-      <li><a href="#product">5. 产品管理</a></li>
-      <li><a href="#process">6. 工序编辑</a></li>
-      <li><a href="#fields">7. 字段填写规则</a></li>
-      <li><a href="#images">8. 图片管理</a></li>
-      <li><a href="#preview">9. 预览与导出</a></li>
+      <li><a href="#ui">5. 主界面介绍</a></li>
+      <li><a href="#sop-mgmt">6. SOP 管理</a></li>
+      <li><a href="#process">7. 工序编辑</a></li>
+      <li><a href="#trace">8. 修改追溯</a></li>
+      <li><a href="#fields">9. 字段填写规则</a></li>
+      <li><a href="#images">10. 图片管理</a></li>
+      <li><a href="#preview">11. 预览与导出</a></li>
     </ul>
-    <div class="section-title">高级</div>
+    <div class="section-title">协作 / 归档</div>
     <ul>
-      <li><a href="#update">10. 自动更新</a></li>
-      <li><a href="#migrate">11. 数据迁移</a></li>
-      <li><a href="#limits">12. 约束速查表</a></li>
+      <li><a href="#sopkg">12. SOP 包导入/导出</a></li>
+      <li><a href="#archive">13. 归档定稿</a></li>
+      <li><a href="#collab">14. 团队协作</a></li>
+    </ul>
+    <div class="section-title">维护</div>
+    <ul>
+      <li><a href="#update">15. 自动更新</a></li>
+      <li><a href="#migrate">16. 数据迁移</a></li>
+      <li><a href="#structure">17. 工程结构</a></li>
     </ul>
     <div class="section-title">支持</div>
     <ul>
-      <li><a href="#faq">13. 常见问题</a></li>
-      <li><a href="#trouble">14. 故障排查</a></li>
+      <li><a href="#faq">18. 常见问题</a></li>
+      <li><a href="#trouble">19. 故障排查</a></li>
     </ul>
   </nav>
 </aside>
 
-<!-- ============================== 内容区 ============================== -->
 <main class="content">
 
 <header>
-  <h1>sop_generate 使用说明</h1>
+  <h1>SOP Generate 使用说明</h1>
   <p class="lead">公司内部标准化作业指导书（SOP）生成工具。把工艺步骤填进表单，自动产出 A3 排版的 HTML 和 PDF 文档。</p>
 </header>
 
@@ -399,6 +387,8 @@
     <li><a href="#quickstart">5 分钟做完第一份 SOP</a></li>
     <li><a href="#process">怎么编辑工序、加图、排序</a></li>
     <li><a href="#preview">怎么导出 PDF 拿去打印</a></li>
+    <li><a href="#archive">怎么归档定稿</a></li>
+    <li><a href="#sopkg">怎么传给同事接力编辑</a></li>
     <li><a href="#update">怎么自动接收新版本</a></li>
     <li><a href="#faq">遇到问题怎么办</a></li>
   </ul>
@@ -413,26 +403,21 @@
 
   <ul>
     <li>📄 <strong>统一排版</strong>：所有产品的 SOP 共用同一套 A3 模板，封面、目录、工艺流程图、工序详情页全部自动生成</li>
-    <li>🖼️ <strong>支持多图</strong>：每道工序可以放 1-4 张图，自动 1 张全占 / 2 张上下 / 3-4 张 2×2 网格布局</li>
+    <li>🖼️ <strong>多图自适应</strong>：每道工序可放任意张图，软件根据数量自动选 1 张全占 / 2 张上下 / 3-4 张 2×2 / 超过 4 张自动分页</li>
     <li>⚙️ <strong>所见即所得</strong>：左边填字段，右边实时预览，改完直接看效果</li>
+    <li>📦 <strong>独立工程包</strong>：每个 SOP 是一个独立的工程文件夹，可一键打包成 <code>.sopkg</code> 发给同事接力编辑</li>
+    <li>👥 <strong>修改追溯</strong>：每道工序自动记录最后修改人和时间，责任清晰</li>
+    <li>📋 <strong>定稿归档</strong>：一键生成带日期的 HTML + PDF + .sopkg 包到指定文件夹</li>
     <li>💾 <strong>导出 HTML + PDF</strong>：内部归档用 HTML，打印发车间用 PDF</li>
     <li>🔄 <strong>自动更新</strong>：启动时检查新版本，一键升级，老数据自动保留</li>
   </ul>
 
-  <h3>1.2 它不能做什么</h3>
-  <div class="warn">
-    <ul style="margin: 0;">
-      <li>不是 Word 替代品：模板是固定的 A3 排版，不支持自由排版</li>
-      <li>不绘制工序图：图片需要工艺员自己用相机/截图准备</li>
-      <li>不连接 PLM/ERP 系统：是独立工具，数据本地存</li>
-    </ul>
-  </div>
-
-  <h3>1.3 适合谁用</h3>
+  <h3>1.2 适合谁用</h3>
   <table>
     <thead><tr><th>角色</th><th>使用方式</th></tr></thead>
     <tbody>
-      <tr><td>工艺员 / 工艺工程师</td><td>主要用户。用图形界面新建产品、编辑工序、导出 PDF</td></tr>
+      <tr><td>工艺员 / 工艺工程师</td><td>主要用户。用图形界面新建 SOP、编辑工序、导出 PDF 给车间</td></tr>
+      <tr><td>结构 / 测试工程师</td><td>接力编辑，编辑后导出 SOP 包发给下游工程师</td></tr>
       <tr><td>班长 / 生产主管</td><td>查看已有 SOP，新版本时一键升级软件</td></tr>
       <tr><td>软件工程师</td><td>可用命令行批量生成；可用 Claude AI 自然语言起草 YAML</td></tr>
     </tbody>
@@ -447,187 +432,188 @@
 
   <h4>📦 准备工作（只需一次）</h4>
   <ol class="steps">
-    <li>从浏览器下载 <a href="https://www.7-zip.org/" target="_blank">7-Zip</a> 并安装。这是解压软件，分发软件需要它</li>
-    <li>确认电脑装了 Microsoft Edge（Win10/11 自带，无需额外操作）或者 Google Chrome。<strong>没装浏览器的话 PDF 导出会用不了</strong></li>
+    <li>装一个支持 <strong>7z 分卷</strong>的解压软件——任意都行：
+      <a href="https://www.7-zip.org/" target="_blank">7-Zip</a> /
+      <a href="https://www.bandisoft.com/bandizip/" target="_blank">Bandizip</a> /
+      <a href="https://www.win-rar.com/" target="_blank">WinRAR</a> 等都可以。如果电脑里已经有解压软件可以跳过这步</li>
+    <li>确认电脑装了 Microsoft Edge（Win10/11 自带，无需额外操作）或 Google Chrome。<strong>没装浏览器的话 PDF 导出会用不了</strong></li>
   </ol>
 
   <h4>📥 下载与解压</h4>
+  <p style="text-align:center;margin: 12px 0;">
+    <a class="dl-link" href="https://gitee.com/soft-hertz/sop_generate-releases/releases" target="_blank">
+      📥 打开发版下载页面
+    </a>
+  </p>
   <ol class="steps">
-    <li>打开公司提供的下载链接（Gitee 发版页面），找到最新版本</li>
-    <li>下载 <code>Windows 下载</code> 章节下的<strong>所有 5 个分卷</strong>：
+    <li>打开上面的下载页面，找到最新版本（页面顶部的那个）</li>
+    <li>在 <strong>🪟 Windows 下载</strong> 章节，把<strong>所有 5 个分卷全部下载</strong>到同一文件夹：
       <pre><code>sop_generate-win-vX.Y.Z.7z.001
 sop_generate-win-vX.Y.Z.7z.002
 sop_generate-win-vX.Y.Z.7z.003
 sop_generate-win-vX.Y.Z.7z.004
 sop_generate-win-vX.Y.Z.7z.005</code></pre>
-      <div class="danger"><strong>必须 5 个全部下载</strong>且放在<strong>同一个文件夹</strong>里，缺一个会解压失败</div>
+      <div class="danger"><strong>5 个必须全部下载</strong>且放在<strong>同一文件夹</strong>，缺一个解压失败</div>
     </li>
-    <li>在 5 个分卷所在的文件夹里，<strong>右键 <code>.7z.001</code></strong>（注意是 001 不是其他）→ <strong>7-Zip</strong> → <strong>解压到当前位置</strong></li>
-    <li>解压后会出现一个 <code>sop_generate-win/</code> 文件夹</li>
-    <li>建议把这个文件夹移到方便的位置，例如 <code>D:\sop_generate\</code></li>
+    <li>在 5 个分卷所在文件夹里，<strong>右键 <code>.7z.001</code></strong>（注意是 001 那一个）→ 选你装的解压软件 → <strong>解压到当前位置</strong></li>
+    <li>得到 <code>sop_generate-win/</code> 文件夹</li>
+    <li>建议移到固定位置，例如 <code>D:\sop_generate\</code></li>
   </ol>
 
   <h4>🚀 首次启动</h4>
   <ol class="steps">
-    <li>双击文件夹里的 <code>sop_generate.exe</code></li>
-    <li>Windows Defender 可能弹窗"未识别的应用"。点 <strong>"更多信息" → "仍要运行"</strong></li>
-    <li>看到主界面出现，标题栏显示版本号即成功</li>
+    <li>双击 <code>sop_generate.exe</code></li>
+    <li>Windows Defender 弹"未识别的应用" → 点 <strong>"更多信息" → "仍要运行"</strong></li>
+    <li>主界面出现即成功</li>
   </ol>
 
-  <div class="tip">建议把 <code>sop_generate.exe</code> 在桌面创建快捷方式：右键 .exe → "发送到" → "桌面快捷方式"</div>
+  <div class="tip">建议右键 <code>sop_generate.exe</code> → "发送到 → 桌面快捷方式"，以后直接桌面双击就能启动</div>
 
   <h3>2.2 macOS 安装</h3>
 
-  <h4>📦 准备工作（只需一次）</h4>
+  <h4>📦 准备工作</h4>
   <ol class="steps">
-    <li>从浏览器下载 <a href="https://www.keka.io/" target="_blank">Keka</a> 并安装（macOS 解压软件，免费）</li>
-    <li>确认装了 Microsoft Edge 或 Google Chrome（用于 PDF 导出）</li>
+    <li>装一个支持 7z 分卷的解压软件——任意都可以：
+      <a href="https://www.keka.io/" target="_blank">Keka</a>（免费）/
+      <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a>（免费）/
+      <code>brew install p7zip</code>（终端方式）等。已有解压软件可以跳过</li>
+    <li>装 Microsoft Edge 或 Google Chrome（PDF 导出用）</li>
   </ol>
 
   <h4>📥 下载与解压</h4>
+  <p style="text-align:center;margin: 12px 0;">
+    <a class="dl-link" href="https://gitee.com/soft-hertz/sop_generate-releases/releases" target="_blank">
+      📥 打开发版下载页面
+    </a>
+  </p>
   <ol class="steps">
-    <li>打开公司提供的下载链接（Gitee 发版页面）</li>
-    <li>下载 <code>macOS 下载</code> 章节下的<strong>所有 4 个分卷</strong></li>
-    <li>双击 <code>.7z.001</code>（Keka 自动识别）→ 解压</li>
-    <li>得到 <code>sop_generate-mac-vX.Y.Z/</code> 文件夹，建议放在 <code>~/Applications/</code> 或<code>桌面</code></li>
+    <li>打开上面的下载页面，在 <strong>🍎 macOS 下载</strong> 章节下载<strong>所有 4 个分卷</strong>到同一文件夹</li>
+    <li>双击 <code>.7z.001</code>（解压软件会自动识别）→ 解压</li>
+    <li>得到 <code>sop_generate-mac-vX.Y.Z/</code> 文件夹，建议放在 <code>~/Applications/</code> 或桌面</li>
   </ol>
 
   <h4>🚀 首次启动</h4>
   <ol class="steps">
     <li>双击 <code>sop_generate.app</code></li>
-    <li>系统弹"无法验证开发者"或"已损坏" → 不要点"移到废纸篓"</li>
-    <li>打开 <kbd>系统设置</kbd> → <kbd>隐私与安全性</kbd> → 滚动到底部，找到 <strong>"sop_generate 已被阻止"</strong> 行 → 点 <strong>"仍要打开"</strong></li>
-    <li>再次双击 <code>sop_generate.app</code> 即可正常运行</li>
+    <li>系统弹"无法验证开发者"或"已损坏" → <strong>不要</strong>点"移到废纸篓"</li>
+    <li>打开 <kbd>系统设置</kbd> → <kbd>隐私与安全性</kbd> → 滚到底部找到 <strong>"sop_generate 已被阻止"</strong> → 点 <strong>"仍要打开"</strong></li>
+    <li>再次双击 <code>sop_generate.app</code> 即可</li>
   </ol>
 
-  <div class="info">macOS 的安全机制对未签名应用是这样。这是一次性操作，之后不会再问。</div>
+  <div class="info">macOS 这套是一次性操作，之后不会再问。</div>
 </section>
 
-<!-- ====================== 3. 5 分钟上手 ====================== -->
-<section id="quickstart">
-  <h2>3. 5 分钟上手（做第一份 SOP）</h2>
+<!-- ====================== 3. 首次启动 · 用户名 ====================== -->
+<section id="user-setup">
+  <h2>3. 首次启动 · 设置用户名</h2>
 
-  <p>以下是一个最小示例，跟着做下来你就理解全流程了。</p>
+  <p>首次启动会<strong>强制要求填写用户名</strong>。这个名字会自动记录到你修改过的每道工序里，用于责任追溯。</p>
 
   <ol class="steps">
-    <li><strong>启动软件</strong>。左侧产品列表里应该已经有一个示例 <code>DEMO01</code></li>
-    <li><strong>点工具栏 <span class="tb-btn">新建产品</span></strong>。弹窗输入产品型号，例如 <code>TEST01</code>，确定</li>
-    <li>左侧出现 <code>TEST01</code>。切换到中间的 <strong>"产品信息"</strong> 标签页，填入：
-      <ul>
-        <li>产品名称：<code>测试产品</code></li>
-        <li>公司名：<code>你的公司名</code></li>
-        <li>文件编号：<code>DOC-001</code></li>
-        <li>发布日期 / 实施日期：填日期</li>
-      </ul>
-    </li>
-    <li>左下角点 <strong>"＋ 工序"</strong> 按钮添加一道工序</li>
-    <li>切换到 <strong>"工序编辑"</strong> 标签页，填入：
+    <li>启动软件后，弹窗 <strong>"请输入你的名字（用于记录 SOP 修改人）"</strong></li>
+    <li>输入你的真实姓名（中文/英文都可以），点确定</li>
+    <li>用户名保存在 <code>config/current_user.json</code>，下次启动不会再问</li>
+    <li>顶部标题栏会显示 <code>SOP Generate · 当前用户：你的名字</code></li>
+  </ol>
+
+  <div class="warn"><strong>用户名为空的话什么都不能做</strong>：保存、新建、删除、归档、导入导出全部会要求先填用户名</div>
+
+  <h3>3.1 修改用户名</h3>
+  <p>如果换人用同一台电脑或者填错了，工具栏点 <span class="tb-btn">设置用户名</span> 改名。改名后<strong>新</strong>的修改会写新用户名；老工序里的修改记录不变。</p>
+</section>
+
+<!-- ====================== 4. 5 分钟上手 ====================== -->
+<section id="quickstart">
+  <h2>4. 5 分钟上手（做第一份 SOP）</h2>
+
+  <ol class="steps">
+    <li>启动软件 → 填用户名 → 主界面出现，左侧已有示例 <code>DEMO01</code></li>
+    <li>工具栏 <span class="tb-btn">新建 SOP</span> → 输入型号 <code>TEST01</code> → 确定</li>
+    <li>左侧出现 <code>TEST01</code>，切到中间 <strong>"产品信息"</strong> 标签页，填封面信息（产品名、公司名、版本、日期）</li>
+    <li>左下角 <strong>"＋ 工序"</strong> 添加一道工序</li>
+    <li>切到 <strong>"工序编辑"</strong> 标签页，填：
       <ul>
         <li>工序名：<code>测试工序</code></li>
-        <li>操作说明：每行一条，例如 "1. 拿起零件"、"2. 装入夹具"</li>
+        <li>操作说明：每行一条</li>
         <li>工具设备 / 作业材料：每行一条</li>
       </ul>
     </li>
-    <li>把一张工序图直接<strong>拖到右下角"图片"区域</strong>，软件会自动复制到产品图片目录</li>
-    <li>右侧应该已经显示<strong>实时预览</strong>，看效果</li>
-    <li>点工具栏 <span class="tb-btn">保存</span></li>
-    <li>点工具栏 <span class="tb-btn">导出 PDF</span>，等几秒 → 弹窗提示路径 → 用文件管理器打开 <code>output/TEST01.pdf</code> 查看</li>
+    <li>把工序图直接<strong>拖到右下角"图片"区域</strong>，软件自动复制到工程包里</li>
+    <li>右侧自动显示<strong>实时预览</strong></li>
+    <li>工具栏 <span class="tb-btn">保存</span></li>
+    <li>定稿后工具栏 <span class="tb-btn">📦 归档定稿</span> → 选输出目录 → 自动生成带日期的 HTML + PDF + .sopkg</li>
   </ol>
-
-  <div class="tip">这就是完整流程：<strong>新建产品 → 加工序 → 填字段 → 拖图 → 导出 PDF</strong>。下面章节是每一步的详细说明。</div>
 </section>
 
-<!-- ====================== 4. 主界面 ====================== -->
+<!-- ====================== 5. 主界面 ====================== -->
 <section id="ui">
-  <h2>4. 主界面介绍</h2>
+  <h2>5. 主界面介绍</h2>
 
-  <div class="mock">
-<span class="label">软件主界面（启动后）</span>┌────────────────────────────────────────────────────────────────────────────┐
-│ sop_generate v1.0.8 · 作业指导书生成器                                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│ [新建产品] [导入旧数据] [保存] │ [检查更新] │ [导出HTML] [导出PDF] [派生新产品] │
-├────────────────┬──────────────────────────────┬─────────────────────────────┤
-│  产品          │ 产品信息  |  工序编辑          │   HTML 预览                  │
-│  ┌──────────┐ │ ┌──────────────────────────┐ │ ┌─────────────────────────┐ │
-│  │ DEMO01   │ │ │  工序名： ____________    │ │ │                         │ │
-│  │ TEST01   │ │ │  □ 关键工序（★）         │ │ │    （实时预览页面）      │ │
-│  └──────────┘ │ │                          │ │ │                         │ │
-│                │ │  操作说明                │ │ │                         │ │
-│  工序          │ │  ┌──────────────────┐    │ │ │                         │ │
-│  ┌──────────┐ │ │  │ 第一步：...       │    │ │ │                         │ │
-│  │ 1. 工序一│ │ │  │ 第二步：...       │    │ │ │                         │ │
-│  │ 2. 工序二│ │ │  └──────────────────┘    │ │ │                         │ │
-│  │ 3. ★工序三│ │ │                          │ │ │                         │ │
-│  └──────────┘ │ │  注意事项 / 工具 / 材料   │ │ │                         │ │
-│                │ │  ┌──────────────────┐    │ │ │                         │ │
-│  [＋工序][－工序]│ │  │                  │    │ │ │                         │ │
-│                │ │  └──────────────────┘    │ │ │                         │ │
-│                │ │                          │ │ │                         │ │
-│                │ │  图片（拖入文件）         │ │ │                         │ │
-│                │ │  ┌──────────────────┐    │ │ │                         │ │
-│                │ │  │ step01.png        │    │ │ │                         │ │
-│                │ │  └──────────────────┘    │ │ │                         │ │
-│                │ └──────────────────────────┘ │ └─────────────────────────┘ │
-├────────────────┴──────────────────────────────┴─────────────────────────────┤
-│ 状态栏：已加载 TEST01.yaml                                                    │
-└────────────────────────────────────────────────────────────────────────────┘
-  </div>
+  <img src="images/main-ui.png" alt="SOP Generate 主界面" class="screenshot">
+  <p class="screenshot-caption">SOP Generate 主界面（v1.1.0）</p>
 
-  <h3>4.1 工具栏按钮</h3>
+  <p>整体布局分三栏：左侧 <strong>产品 + 工序列表</strong>（每个工序右侧显示 · 最后修改人），中间 <strong>编辑区</strong>（产品信息 / 工序编辑两个标签页，底部显示当前工序的创建/修改追溯信息），右侧 <strong>HTML 实时预览</strong>。顶部是工具栏，标题栏显示当前用户名。</p>
+
+
+  <h3>5.1 工具栏按钮</h3>
   <table>
     <thead><tr><th>按钮</th><th>功能</th><th>使用时机</th></tr></thead>
     <tbody>
-      <tr><td><span class="tb-btn">新建产品</span></td><td>创建一个新的产品 YAML 和图片目录</td><td>开新项目时</td></tr>
-      <tr><td><span class="tb-btn">导入旧数据</span></td><td>从老版本目录批量迁移产品和图片</td><td>升级软件后第一次启动</td></tr>
-      <tr><td><span class="tb-btn">保存</span></td><td>把当前编辑内容写入 YAML 文件</td><td>编辑后随时</td></tr>
-      <tr><td><span class="tb-btn">检查更新</span></td><td>主动查询是否有新版本</td><td>不想等启动自动检测时</td></tr>
-      <tr><td><span class="tb-btn">导出 HTML</span></td><td>渲染为 HTML 文件（用浏览器看）</td><td>归档、邮件分发</td></tr>
-      <tr><td><span class="tb-btn">导出 PDF</span></td><td>渲染为 PDF 文件（用于打印）</td><td>给车间打印纸质</td></tr>
-      <tr><td><span class="tb-btn">派生新产品</span></td><td>复制当前产品作为新产品的起点</td><td>类似产品快速建模</td></tr>
-      <tr><td><span class="tb-btn">打开图片目录</span></td><td>用资源管理器打开当前产品的 assets/images 目录</td><td>批量管理图片</td></tr>
+      <tr><td><span class="tb-btn">新建 SOP</span></td><td>创建一个新的 SOP 工程文件夹</td><td>开新项目</td></tr>
+      <tr><td><span class="tb-btn">删除 SOP</span></td><td>删除当前 SOP（需双重确认）</td><td>清理废弃 SOP</td></tr>
+      <tr><td><span class="tb-btn">导入 SOP 包</span></td><td>从 .sopkg 文件导入一个 SOP 工程</td><td>同事发来 SOP 包接力</td></tr>
+      <tr><td><span class="tb-btn">导出 SOP 包</span></td><td>把当前 SOP 打包为 .sopkg 文件</td><td>发给同事接力或备份</td></tr>
+      <tr><td><span class="tb-btn">📦 归档定稿</span></td><td>定稿后一键生成带日期的 HTML+PDF+.sopkg 包</td><td>SOP 最终定稿</td></tr>
+      <tr><td><span class="tb-btn">保存</span></td><td>把当前编辑写入 YAML，更新 _meta 修改追溯</td><td>编辑后随时</td></tr>
+      <tr><td><span class="tb-btn">设置用户名</span></td><td>修改当前用户名</td><td>换人用 / 改名</td></tr>
+      <tr><td><span class="tb-btn">检查更新</span></td><td>主动查询是否有新版本</td><td>主动查更新</td></tr>
+      <tr><td><span class="tb-btn">导出 HTML</span></td><td>渲染为 HTML 文件</td><td>归档、邮件分发</td></tr>
+      <tr><td><span class="tb-btn">导出 PDF</span></td><td>渲染为 PDF 文件</td><td>给车间打印纸质</td></tr>
+      <tr><td><span class="tb-btn">派生新产品</span></td><td>复制当前 SOP 作为新 SOP 的起点</td><td>类似产品快速建模</td></tr>
+      <tr><td><span class="tb-btn">打开图片目录</span></td><td>用资源管理器打开当前 SOP 的 images 目录</td><td>批量管理图片</td></tr>
+      <tr><td><span class="tb-btn">刷新预览</span></td><td>强制重新渲染右侧预览</td><td>预览未自动刷新时</td></tr>
+      <tr><td><span class="tb-btn">帮助</span></td><td>显示版本号 + 打开本使用手册</td><td>查版本、查使用方法</td></tr>
     </tbody>
   </table>
 
-  <h3>4.2 三大区域</h3>
+  <h3>5.2 三大区域</h3>
   <table>
     <thead><tr><th>区域</th><th>作用</th></tr></thead>
     <tbody>
-      <tr><td><strong>左侧</strong></td><td>上半显示所有产品，下半显示当前产品的所有工序。下面有 ＋／－ 按钮增删工序</td></tr>
-      <tr><td><strong>中间</strong></td><td>编辑区。两个标签页：<strong>产品信息</strong>（封面信息）和 <strong>工序编辑</strong>（当前工序的所有字段）</td></tr>
-      <tr><td><strong>右侧</strong></td><td>实时预览，编辑任何字段约 0.6 秒后自动刷新</td></tr>
+      <tr><td><strong>左侧</strong></td><td>上半：所有 SOP 列表；下半：当前 SOP 的所有工序，<strong>工序行右侧显示 · 最后修改人</strong>；下面 ＋／－ 增删</td></tr>
+      <tr><td><strong>中间</strong></td><td>编辑区。两个标签：<strong>产品信息</strong>（封面）/ <strong>工序编辑</strong>（当前工序所有字段 + 底部修改追溯信息）</td></tr>
+      <tr><td><strong>右侧</strong></td><td>HTML 实时预览，编辑字段后约 0.6 秒自动刷新</td></tr>
     </tbody>
   </table>
 </section>
 
-<!-- ====================== 5. 产品管理 ====================== -->
-<section id="product">
-  <h2>5. 产品管理</h2>
+<!-- ====================== 6. SOP 管理 ====================== -->
+<section id="sop-mgmt">
+  <h2>6. SOP 管理</h2>
 
-  <h3>5.1 新建产品</h3>
+  <h3>6.1 新建 SOP</h3>
   <ol class="steps">
-    <li>点工具栏 <span class="tb-btn">新建产品</span></li>
-    <li>弹窗输入<strong>产品型号</strong>，要求：
+    <li>工具栏 <span class="tb-btn">新建 SOP</span></li>
+    <li>弹窗输入<strong>产品型号</strong>：
       <ul>
-        <li>只能含字母、数字、下划线、横线</li>
-        <li>不能含中文、空格、特殊符号</li>
+        <li>只能含字母、数字、下划线、横线（不能含中文、空格、特殊符号）</li>
         <li>例：<code>XESA01</code>、<code>RX-2000</code>、<code>DEMO_v2</code></li>
       </ul>
     </li>
-    <li>确定后软件自动：
-      <ul>
-        <li>创建空白 YAML 文件 <code>products/&lt;型号&gt;.yaml</code></li>
-        <li>创建图片目录 <code>assets/images/&lt;型号&gt;/</code></li>
-        <li>添加一道默认工序</li>
-      </ul>
+    <li>确定后软件自动创建工程目录：
+      <pre><code>sop_packages/&lt;型号&gt;/
+├── product.yaml      （YAML，含 _meta 追溯字段）
+├── images/           （图片，初始为空）
+└── output/           （生成的 HTML/PDF，初始为空）</code></pre>
     </li>
-    <li>切到 <strong>"产品信息"</strong> 标签页填写封面字段</li>
+    <li>左侧自动选中新建的 SOP，切到 <strong>"产品信息"</strong> 标签页填字段</li>
   </ol>
 
-  <h3>5.2 产品信息字段</h3>
+  <h3>6.2 产品信息字段</h3>
   <table>
     <thead><tr><th>字段</th><th>说明</th><th>示例</th></tr></thead>
     <tbody>
-      <tr><td>产品型号</td><td>同 YAML 文件名，新建后不能改</td><td>XESA01</td></tr>
+      <tr><td>产品型号</td><td>同工程目录名，新建后不可改</td><td>XESA01</td></tr>
       <tr><td>产品名称</td><td>显示在工序页表头</td><td>射频终端</td></tr>
       <tr><td>公司名</td><td>显示在封面顶部（绿色字）</td><td>你公司全称</td></tr>
       <tr><td>文件编号</td><td>显示在封面和每页表头</td><td>DOC-XX-001</td></tr>
@@ -637,494 +623,487 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     </tbody>
   </table>
 
-  <h3>5.3 派生产品（基于已有产品快速建模）</h3>
-  <div class="tip">同一系列的产品工序结构往往类似。<strong>派生</strong>可以复制当前产品的所有工序当作新产品的起点。</div>
-
+  <h3>6.3 派生 SOP（基于已有产品快速建模）</h3>
   <ol class="steps">
-    <li>左侧选中作为模板的产品（例：<code>XESA01</code>）</li>
-    <li>点工具栏 <span class="tb-btn">派生新产品</span></li>
+    <li>左侧选中作为模板的 SOP（例：<code>XESA01</code>）</li>
+    <li>工具栏 <span class="tb-btn">派生新产品</span></li>
     <li>输入新型号（例：<code>XESA02</code>）</li>
     <li>软件自动：
       <ul>
-        <li>复制所有工序结构（工序名、操作说明、注意事项等）</li>
-        <li><strong>清空图片字段</strong>（新产品零件不同，需要重新选图）</li>
-        <li>创建空的图片目录 <code>assets/images/XESA02/</code></li>
+        <li>复制所有工序结构（名称、操作说明、注意事项、工具材料）</li>
+        <li><strong>清空图片字段</strong>（新产品零件不同，需重新选图）</li>
+        <li><strong>清空 _meta</strong>（追溯记录从派生时刻起重新累积）</li>
+        <li>创建空的 <code>sop_packages/XESA02/images/</code> 目录</li>
       </ul>
     </li>
-    <li>在新产品上修改差异部分 + 替换图片即可</li>
+    <li>在新 SOP 上修改差异部分 + 替换图片</li>
   </ol>
 
-  <h3>5.4 删除产品</h3>
-  <p>软件界面没有删除按钮。如果要删除产品：</p>
+  <h3>6.4 删除 SOP</h3>
+  <p>支持 GUI 删除，<strong>双重确认</strong>防误删：</p>
   <ol class="steps">
-    <li>关闭软件</li>
-    <li>用文件管理器删除 <code>products/&lt;型号&gt;.yaml</code></li>
-    <li>用文件管理器删除 <code>assets/images/&lt;型号&gt;/</code> 整个目录</li>
-    <li>重新启动软件</li>
+    <li>左侧选中要删除的 SOP</li>
+    <li>工具栏 <span class="tb-btn">删除 SOP</span></li>
+    <li><strong>第一道确认</strong>：弹窗显示工序数、图片数 + 警告"不可撤销" → 点"删除"</li>
+    <li><strong>第二道确认</strong>：要求<strong>手动输入产品型号</strong>才允许删除 → 输错或取消都不删</li>
+    <li>确认后整个工程目录被删除</li>
   </ol>
+
+  <div class="danger"><strong>删除前如需保留，请先用 <span class="tb-btn">导出 SOP 包</span> 备份</strong>。删除后无法恢复（除非操作系统的回收站还有）。</div>
 </section>
 
-<!-- ====================== 6. 工序编辑 ====================== -->
+<!-- ====================== 7. 工序编辑 ====================== -->
 <section id="process">
-  <h2>6. 工序编辑</h2>
+  <h2>7. 工序编辑</h2>
 
-  <h3>6.1 添加工序</h3>
+  <h3>7.1 添加工序</h3>
   <ol class="steps">
-    <li>左侧选中产品</li>
-    <li>左下角点 <span class="tb-btn">＋ 工序</span> 按钮</li>
-    <li>新工序出现在列表最底部，名字默认是"新工序"</li>
-    <li>切到 <strong>"工序编辑"</strong> 标签页修改字段</li>
+    <li>左侧选中 SOP</li>
+    <li>左下角点 <strong>＋ 工序</strong> 按钮</li>
+    <li>新工序出现在列表底部，名字默认"新工序"，标记当前用户为创建者</li>
+    <li>切到 <strong>"工序编辑"</strong> 标签页填字段</li>
   </ol>
 
-  <h3>6.2 删除工序</h3>
+  <h3>7.2 删除工序</h3>
   <ol class="steps">
     <li>左侧选中要删除的工序</li>
-    <li>点 <span class="tb-btn">－ 工序</span> 按钮</li>
-    <li>立即生效，不会二次确认。如果误删可以撤回吗？不可以，<strong>必须重新填一遍</strong>。建议删除前用 <span class="tb-btn">保存</span> 备份当前 YAML</li>
+    <li>点 <strong>－ 工序</strong></li>
+    <li>立即生效，不二次确认。误删后<strong>必须重新填一遍</strong>，建议删除前用 <span class="tb-btn">保存</span> 备份</li>
   </ol>
 
-  <h3>6.3 调整工序顺序（拖拽）</h3>
+  <h3>7.3 调整工序顺序（拖拽）</h3>
   <ol class="steps">
-    <li>左侧工序列表里，<strong>按住鼠标左键</strong>拖动工序行</li>
-    <li>拖到目标位置，松开</li>
-    <li>顺序立即生效，右侧预览自动更新（封面、目录、流程图都跟着重新排列）</li>
+    <li>左侧工序列表里<strong>按住鼠标左键拖动</strong></li>
+    <li>松开后顺序立即生效，封面、目录、流程图全部自动重排</li>
     <li>记得点 <span class="tb-btn">保存</span></li>
   </ol>
 
-  <h3>6.4 标记关键工序 ★</h3>
-  <p>关键工序在文档中会用红色 ★ 标识。涉及静电敏感器件、精密装配等的工序应该标记。</p>
+  <h3>7.4 标记关键工序 ★</h3>
+  <p>涉及静电敏感器件、精密装配等的工序应标记。</p>
 
   <ol class="steps">
     <li>切到 <strong>"工序编辑"</strong> 标签页</li>
     <li>勾选 <kbd>☐ 关键工序（★）</kbd></li>
-    <li>保存后会在以下位置出现 ★：
-      <ul>
-        <li>封面页的工序列表</li>
-        <li>目录页的工序条目</li>
-        <li>工艺流程图的对应节点</li>
-        <li>工序详情页表头</li>
-      </ul>
-    </li>
+    <li>保存后在以下位置出现 ★：封面、目录、流程图、工序详情页表头</li>
   </ol>
 </section>
 
-<!-- ====================== 7. 字段填写规则 ====================== -->
+<!-- ====================== 8. 修改追溯 ====================== -->
+<section id="trace">
+  <h2>8. 修改追溯</h2>
+
+  <p>v1.1.0 起每道工序都自动记录创建人/修改人。这是<strong>责任追溯</strong>的核心机制。</p>
+
+  <h3>8.1 看修改记录</h3>
+  <ul>
+    <li><strong>左侧工序列表</strong>：每条工序右侧显示 · <strong>最后修改人</strong>
+      <br>例：<code>1. 测试工序一 · 徐亚彬</code></li>
+    <li><strong>工序编辑器底部</strong>：显示完整的<strong>创建</strong>和<strong>最后修改</strong>信息
+      <br>例：<code>创建：徐亚彬 2026-05-29 20:06　│　最后修改：徐亚彬 2026-05-29 20:30</code></li>
+  </ul>
+
+  <h3>8.2 追溯机制</h3>
+  <table>
+    <thead><tr><th>动作</th><th>追溯字段更新</th></tr></thead>
+    <tbody>
+      <tr><td>新建工序</td><td>created_by/at 和 last_modified_by/at 都填当前用户</td></tr>
+      <tr><td>编辑工序后保存</td><td><strong>仅</strong>更新 last_modified_by/at（保留 created_*）</td></tr>
+      <tr><td>保存时没改</td><td>什么都不更新（智能对比，避免误标）</td></tr>
+      <tr><td>拖拽排序</td><td>不算修改，工序内容不变就不更新</td></tr>
+      <tr><td>派生 SOP</td><td>新 SOP 的 _meta 重置，由派生人作为"创建者"</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">这套追溯机制完全自动，<strong>不需要你手动操作</strong>。看修改记录就能知道每道工序最后是谁动的。</div>
+</section>
+
+<!-- ====================== 9. 字段填写规则 ====================== -->
 <section id="fields">
-  <h2>7. 字段填写规则</h2>
+  <h2>9. 字段填写规则</h2>
 
-  <p>每个工序有 6 类字段。下面说明每类的规则和数量限制。</p>
+  <p>每个工序有 6 类字段。v1.1.0 起<strong>所有字段都没有数量硬限制</strong>，超出单页容量会自动分页显示。</p>
 
-  <h3>7.1 操作说明</h3>
-  <p>工序的具体步骤。每行一条，按填写顺序自动加序号 1、2、3...</p>
-
-  <table class="field-table">
+  <h3>9.1 操作说明</h3>
+  <table>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
-      <tr><td>条数上限</td><td><span class="badge badge-blue">18 条</span>，超出会校验报错</td></tr>
-      <tr><td>单页最多</td><td>6 条；超过 6 条<strong>自动拆页</strong>，标"续 N/M"</td></tr>
-      <tr><td>字符长度</td><td>不强制限制，但建议每条 ≤ 30 个汉字</td></tr>
-      <tr><td>推荐做法</td><td>如果超过 6 条，<strong>优先把工序拆成两道</strong>而不是依赖自动拆页，这样图片和注意事项也能各自配套</td></tr>
+      <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 6 条，超出自动分多页</td></tr>
+      <tr><td>分页示例</td><td>14 条操作说明 → 自动分 3 页（6+6+2），页头标 (1/3) (2/3) (3/3)</td></tr>
+      <tr><td>字符长度</td><td>不强制，建议每条 ≤ 30 个汉字</td></tr>
+      <tr><td>推荐做法</td><td><strong>超过 6 条优先把工序拆成两道</strong>，每道有自己的图片/工具/材料，比续页更清晰</td></tr>
     </tbody>
   </table>
 
-  <h3>7.2 注意事项</h3>
-  <p>每行一条，自动加 ①、②、③、④ 编号。</p>
-
-  <table class="field-table">
+  <h3>9.2 注意事项</h3>
+  <table>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
-      <tr><td>条数上限</td><td><span class="badge badge-blue">4 条</span></td></tr>
-      <tr><td>字符长度</td><td>不强制，但建议每条 ≤ 28 个汉字（超长会自动换行）</td></tr>
-      <tr><td>超出怎么办</td><td>如果有 5 条注意事项，建议把工序拆成两道</td></tr>
+      <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 4 条，超出自动分多页</td></tr>
+      <tr><td>编号</td><td>自动加 ①、②、③、④...（续页继续序号）</td></tr>
+      <tr><td>字符长度</td><td>不强制，建议每条 ≤ 28 个汉字</td></tr>
     </tbody>
   </table>
 
-  <h3>7.3 工具设备 / 作业材料</h3>
-  <p>两个并列字段，分别填工具和材料。每行一条。</p>
-
-  <table class="field-table">
+  <h3>9.3 工具设备 / 作业材料</h3>
+  <table>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
-      <tr><td>条数上限</td><td><span class="badge badge-blue">每项 4 条</span></td></tr>
-      <tr><td>字符长度</td><td>不强制，但建议 ≤ 10 个汉字。太长会换行后被截断（不影响布局）</td></tr>
-      <tr><td>示例</td><td>工具："内六角螺丝刀"、"扭力扳手"；材料："M3×8 螺钉"、"螺纹胶"</td></tr>
-    </tbody>
-  </table>
-
-  <h3>7.4 工序名</h3>
-  <table class="field-table">
-    <thead><tr><th>项目</th><th>规则</th></tr></thead>
-    <tbody>
-      <tr><td>字符长度</td><td>不强制，但建议 ≤ 12 个汉字。超长会自动换行显示</td></tr>
-      <tr><td>用途</td><td>显示在封面工序列表、目录、工艺流程图节点、工序页表头</td></tr>
+      <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 4 项，超出自动分多页</td></tr>
+      <tr><td>字符长度</td><td>不强制，建议 ≤ 10 个汉字</td></tr>
     </tbody>
   </table>
 
   <div class="info">
-    <strong>关于"字符长度无硬限"</strong>：早期版本对每个字段长度有严格限制，超长直接报错。现在改成 <strong>CSS 自动换行+裁切</strong>——你可以填得长一点，软件在单元格里换行显示，溢出部分被裁掉不影响布局。这样工艺员有更大灵活性，但<strong>仍建议简洁</strong>，因为太长读起来累。
+    <strong>关于"齐头分页"</strong>：一道工序的操作说明、注意事项、工具、材料、图片各自都可能需要分多页。
+    实际页数 = 这五项中需要最多页数的那一项，每一页同时显示各字段的当前批次。
+    举例：12 条 ops + 6 条 notes + 5 项 tools + 7 张图 → 总页数 = max(2,2,2,2) = 2 页。
   </div>
 </section>
 
-<!-- ====================== 8. 图片管理 ====================== -->
+<!-- ====================== 10. 图片管理 ====================== -->
 <section id="images">
-  <h2>8. 图片管理</h2>
+  <h2>10. 图片管理</h2>
 
-  <h3>8.1 添加图片（拖拽）</h3>
+  <h3>10.1 添加图片（拖拽）</h3>
   <ol class="steps">
-    <li>准备好图片文件（推荐 PNG，JPG 也可以）</li>
-    <li>从文件管理器拖到中间编辑区右下方的"图片"区域</li>
+    <li>准备图片（推荐 PNG，JPG 也可以）</li>
+    <li>从文件管理器拖到中间编辑区右下方"图片"区域</li>
     <li>软件自动：
       <ul>
-        <li>把图片复制到 <code>assets/images/&lt;产品型号&gt;/</code></li>
-        <li>把文件名填入 <code>images</code> 字段</li>
+        <li>把图片复制到 <code>sop_packages/&lt;型号&gt;/images/</code></li>
+        <li>把文件名填入工序的 <code>images</code> 字段</li>
         <li>右侧预览立即显示</li>
       </ul>
     </li>
   </ol>
 
-  <div class="tip">如果两个产品的工序使用同一张图，可以在<strong>不同产品目录下放同名文件</strong>，或者手动改 YAML 的 image_base 路径。普通用户直接拖拽即可。</div>
-
-  <h3>8.2 图片数量与布局</h3>
-  <p>每道工序可以放 <strong>1-4 张图</strong>，软件按数量<strong>自动选择布局</strong>，不需要手动调。</p>
+  <h3>10.2 图片数量与布局</h3>
+  <p>每道工序可以放<strong>任意张图</strong>，软件按数量自动选择布局：</p>
 
   <div class="layout-demo">
     <div class="item">
-      <div class="pic-block pic-1" style="height: 80px;">单图</div>
+      <div style="background:#4a6ebd;color:#fff;padding:20px;border-radius:3px;font-size:11px;">单图</div>
       <div class="caption"><strong>1 张</strong><br>全占右半区</div>
     </div>
     <div class="item">
-      <div class="pic-2-grid pic-2-rows" style="display:grid;height:80px;gap:4px;grid-template-rows:1fr 1fr;">
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 1</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 2</div>
+      <div style="display:grid;gap:4px;grid-template-rows:1fr 1fr;height:80px;">
+        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">1</div>
+        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">2</div>
       </div>
       <div class="caption"><strong>2 张</strong><br>上下排列</div>
     </div>
     <div class="item">
-      <div class="pic-2-grid pic-2x2" style="display:grid;height:80px;gap:4px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;">
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 1</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 2</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;grid-column: span 2;">图 3</div>
+      <div style="display:grid;gap:4px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:80px;">
+        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">1</div>
+        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">2</div>
+        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;grid-column:span 2;">3</div>
         <div></div>
       </div>
-      <div class="caption"><strong>3 张</strong><br>2×2 网格</div>
+      <div class="caption"><strong>3-4 张</strong><br>2×2 网格</div>
     </div>
     <div class="item">
-      <div class="pic-2-grid pic-2x2" style="display:grid;height:80px;gap:4px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;">
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 1</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 2</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 3</div>
-        <div style="background:#4a6ebd;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:2px;">图 4</div>
+      <div style="background:#fff3cd;color:#856404;padding:10px;border-radius:3px;font-size:10px;line-height:1.3;">
+        <strong>≥ 5 张</strong><br>
+        自动分页<br>
+        每页 2×2
       </div>
-      <div class="caption"><strong>4 张</strong><br>2×2 网格</div>
+      <div class="caption"><strong>超过 4 张</strong><br>自动分多页</div>
     </div>
   </div>
 
-  <h3>8.3 图片大小建议</h3>
+  <h3>10.3 图片大小建议</h3>
   <table>
     <thead><tr><th>项目</th><th>建议</th></tr></thead>
     <tbody>
       <tr><td>分辨率</td><td>不低于 1280×800，太低打印会糊</td></tr>
       <tr><td>格式</td><td>PNG（推荐）或 JPG</td></tr>
-      <tr><td>单图体积</td><td>不要超过 5MB，太大文档体积膨胀</td></tr>
+      <tr><td>单图体积</td><td>不要超过 5MB</td></tr>
       <tr><td>命名</td><td>用工序名+序号，例：<code>装O型圈_01.png</code></td></tr>
     </tbody>
   </table>
-
-  <div class="tip">需要超过 4 张图，建议把工序拆分。一道工序图太多说明步骤太多，本来就该拆。</div>
-
-  <h3>8.4 图片不显示？</h3>
-  <ol class="steps">
-    <li>检查图片文件是否真的在 <code>assets/images/&lt;产品型号&gt;/</code> 下</li>
-    <li>检查 YAML 里 <code>images</code> 字段的文件名是否拼写正确（区分大小写、含扩展名）</li>
-    <li>试着重新拖拽一次</li>
-  </ol>
 </section>
 
-<!-- ====================== 9. 预览与导出 ====================== -->
+<!-- ====================== 11. 预览与导出 ====================== -->
 <section id="preview">
-  <h2>9. 预览与导出</h2>
+  <h2>11. 预览与导出</h2>
 
-  <h3>9.1 实时预览</h3>
-  <p>右侧区域是 HTML 实时预览。任何字段改动后约 <strong>0.6 秒</strong>自动刷新。</p>
+  <h3>11.1 实时预览</h3>
+  <p>右侧是 HTML 实时预览。任何字段改动后约 <strong>0.6 秒</strong>自动刷新。如果觉得卡，工具栏点 <span class="tb-btn">刷新预览</span> 强制刷新。</p>
 
-  <p>如果觉得没刷新或者卡住，点工具栏 <span class="tb-btn">刷新预览</span> 强制刷新。</p>
-
-  <div class="info">预览的是 HTML 排版，<strong>和导出的 PDF 视觉一致</strong>。打印效果直接看右侧就行。</div>
-
-  <h3>9.2 导出 HTML</h3>
+  <h3>11.2 导出 HTML</h3>
   <ol class="steps">
-    <li>点工具栏 <span class="tb-btn">导出 HTML</span></li>
-    <li>软件自动渲染并保存到 <code>output/&lt;产品型号&gt;.html</code></li>
-    <li>弹窗提示完成路径</li>
-    <li>用浏览器打开即可</li>
+    <li>工具栏 <span class="tb-btn">导出 HTML</span></li>
+    <li>软件自动渲染并保存到 <code>sop_packages/&lt;型号&gt;/output/&lt;型号&gt;.html</code></li>
   </ol>
 
-  <p><strong>用途</strong>：归档、邮件分发、内部网页浏览。</p>
-
-  <h3>9.3 导出 PDF</h3>
+  <h3>11.3 导出 PDF</h3>
   <ol class="steps">
-    <li>确认电脑装了 Microsoft Edge 或 Google Chrome（首次需要）</li>
-    <li>点工具栏 <span class="tb-btn">导出 PDF</span></li>
-    <li>软件自动：
+    <li>确认装了 Microsoft Edge 或 Chrome</li>
+    <li>工具栏 <span class="tb-btn">导出 PDF</span></li>
+    <li>软件自动调浏览器以无界面模式打印为 PDF</li>
+    <li>保存到 <code>sop_packages/&lt;型号&gt;/output/&lt;型号&gt;.pdf</code></li>
+  </ol>
+
+  <h3>11.4 输出位置</h3>
+  <pre><code>sop_packages/
+└── XESA01/                  ← 一个 SOP 的所有内容都在这
+    ├── product.yaml         ← 工序数据
+    ├── images/              ← 工序图
+    └── output/              ← 导出的 HTML/PDF
+        ├── XESA01.html
+        └── XESA01.pdf</code></pre>
+</section>
+
+<!-- ====================== 12. SOP 包导入/导出 ====================== -->
+<section id="sopkg">
+  <h2>12. SOP 包导入/导出（.sopkg）</h2>
+
+  <p>每个 SOP 工程文件夹可以一键打包成 <code>.sopkg</code> 文件，方便发给同事接力编辑或者备份。</p>
+
+  <h3>12.1 导出 SOP 包</h3>
+  <ol class="steps">
+    <li>左侧选中要导出的 SOP</li>
+    <li>工具栏 <span class="tb-btn">导出 SOP 包</span></li>
+    <li>文件对话框：选保存位置和文件名（默认 <code>&lt;型号&gt;.sopkg</code>）</li>
+    <li>软件自动打包：
       <ul>
-        <li>先渲染 HTML</li>
-        <li>调浏览器以"无界面"模式打开 HTML，打印为 PDF</li>
-        <li>保存到 <code>output/&lt;产品型号&gt;.pdf</code></li>
+        <li>product.yaml（含 _meta 追溯）</li>
+        <li>images/ 整个目录</li>
+        <li>output/ 已生成的 HTML/PDF（如果有）</li>
       </ul>
     </li>
-    <li>弹窗提示完成路径</li>
+    <li>得到一个 <code>&lt;型号&gt;.sopkg</code> 文件，可以发给同事</li>
   </ol>
 
-  <p><strong>用途</strong>：打印纸质 SOP 发到车间。</p>
+  <div class="info"><code>.sopkg</code> 本质是 ZIP 压缩包，用 7-Zip / Keka 也能直接打开看内容。</div>
 
-  <div class="warn">如果导出 PDF 失败，看本文档 <a href="#trouble">第 14 章 故障排查</a>，通常是浏览器路径检测不到。</div>
+  <h3>12.2 导入 SOP 包</h3>
+  <ol class="steps">
+    <li>工具栏 <span class="tb-btn">导入 SOP 包</span></li>
+    <li>文件对话框：选 <code>.sopkg</code> 文件</li>
+    <li>软件解压到 <code>sop_packages/&lt;型号&gt;/</code>
+      <ul>
+        <li><strong>同名已存在</strong>：自动备份成 <code>&lt;型号&gt;.bak_&lt;时间戳&gt;/</code>，导入新的</li>
+        <li><strong>不存在</strong>：直接导入</li>
+      </ul>
+    </li>
+    <li>左侧自动选中导入的 SOP，立即可编辑</li>
+  </ol>
 
-  <h3>9.4 输出文件去哪了</h3>
-  <p>所有生成的文件在 sop_generate 文件夹下的 <code>output/</code> 子目录里：</p>
-
-  <pre><code>sop_generate-win/         (或 sop_generate-mac/)
-├── sop_generate.exe       (或 .app)
-├── products/              （你的产品 YAML）
-├── assets/images/         （你的产品图片）
-└── output/                 ← 生成的 HTML 和 PDF 在这里
-    ├── XESA01.html
-    ├── XESA01.pdf
-    └── TEST01.pdf</code></pre>
-
-  <p>点工具栏没有"打开输出目录"按钮，需要自己用文件管理器去打开 <code>output/</code>。</p>
+  <h3>12.3 接力编辑场景</h3>
+  <p>结构 → 工艺 → 测试 接力做 SOP：</p>
+  <ol class="steps">
+    <li>结构工程师建 SOP，填工序 1-3（结构装配） → <span class="tb-btn">导出 SOP 包</span> → 发给工艺员</li>
+    <li>工艺员 <span class="tb-btn">导入 SOP 包</span> → 继续编辑工序 4-N → <span class="tb-btn">导出 SOP 包</span> → 发给测试</li>
+    <li>测试工程师 <span class="tb-btn">导入 SOP 包</span> → 加测试工序 → <span class="tb-btn">📦 归档定稿</span></li>
+  </ol>
+  <p>每一道工序的 <code>_meta</code> 都会记录是谁加的、谁改的，责任清晰。</p>
 </section>
 
-<!-- ====================== 10. 自动更新 ====================== -->
-<section id="update">
-  <h2>10. 自动更新</h2>
+<!-- ====================== 13. 归档定稿 ====================== -->
+<section id="archive">
+  <h2>13. 归档定稿</h2>
 
-  <h3>10.1 工作原理</h3>
+  <p>SOP 最终定稿后，用 <span class="tb-btn">📦 归档定稿</span> 一键生成带日期的归档物，<strong>保存到你指定的文件夹</strong>。</p>
+
+  <h3>13.1 操作步骤</h3>
   <ol class="steps">
-    <li>软件每次启动后约 1-2 秒，<strong>后台</strong>检查公司发版仓库是否有新版本</li>
-    <li>有新版 → 弹窗提示，你可以选 <strong>"立即更新" / "暂不更新" / "跳过此版本"</strong></li>
-    <li>选立即更新 → 软件启动独立的 updater 子程序，自己退出</li>
-    <li>updater 下载新版本分卷 → 校验 → 解压 → 替换文件（<strong>保留你的产品数据</strong>）→ 启动新版本</li>
-    <li>整个过程 2-5 分钟，进度条全程可见</li>
+    <li>左侧选中要归档的 SOP</li>
+    <li>工具栏 <span class="tb-btn">📦 归档定稿</span></li>
+    <li>软件自动跑校验（必填字段、图片存在等）+ 保存当前编辑</li>
+    <li>文件对话框：<strong>选输出文件夹</strong>（建议公司归档盘的对应位置）</li>
+    <li>软件自动生成：HTML + PDF + .sopkg 包（文件名都带日期）</li>
+    <li>完成弹窗汇报产物清单</li>
   </ol>
 
-  <h3>10.2 升级时保留的数据</h3>
-  <p>升级<strong>自动保留</strong>以下目录，不会被新版本覆盖：</p>
+  <h3>13.2 归档产物</h3>
+  <p>假设今天是 <code>2026-05-29</code>，归档 <code>DEMO01</code> 到 <code>D:\公司归档\SOP\</code>：</p>
 
+  <pre><code>D:\公司归档\SOP\
+├── DEMO01_20260529/                    ← 工程文件夹（带日期）
+│   ├── product.yaml                    ← YAML 源数据（含 _meta）
+│   ├── images/                         ← 全部工序图
+│   │   ├── step01.png ... step09.png
+│   ├── DEMO01_20260529.html            ← HTML 文档
+│   └── DEMO01_20260529.pdf             ← PDF 文档
+└── DEMO01_20260529.sopkg               ← 同名 .sopkg 包（含上面全部）</code></pre>
+
+  <h3>13.3 注意点</h3>
+  <ul>
+    <li><strong>同日多次归档</strong>：自动加序号 <code>_2/</code>、<code>_3/</code>...不覆盖之前的</li>
+    <li><strong>校验未通过</strong>：必填字段缺失、图片找不到等会拒绝归档，先修好再归档</li>
+    <li><strong>用户名必须设置</strong>：未设用户名不能归档</li>
+    <li><strong>PDF 失败不阻塞</strong>：没装 Edge/Chrome 时 PDF 会跳过，但 HTML 仍生成</li>
+  </ul>
+
+  <div class="tip">归档物里的 <code>.sopkg</code> 包可以直接邮寄、上传到归档系统、刻盘存档——单文件搞定。</div>
+</section>
+
+<!-- ====================== 14. 团队协作 ====================== -->
+<section id="collab">
+  <h2>14. 团队协作建议</h2>
+
+  <h3>14.1 接力编辑（推荐）</h3>
+  <p>用 <code>.sopkg</code> 包传递，详见 <a href="#sopkg">12.3 接力编辑场景</a>。</p>
+
+  <h3>14.2 共享网盘</h3>
+  <p>把 <code>sop_packages/</code> 整个目录指向公司共享盘（OneDrive / 钉钉网盘 / 私有 NAS），多人共用：</p>
+  <ol class="steps">
+    <li>团队约定一个共享盘位置，例：<code>\\公司盘\sop_共享\</code></li>
+    <li>每个人把自己软件目录下的 <code>sop_packages/</code> 改为指向共享盘的符号链接</li>
+    <li>约定"动谁的 SOP 先在群里通知一声"</li>
+  </ol>
+
+  <div class="warn">共享网盘没有冲突检测，<strong>同时改同一个 SOP 会互相覆盖</strong>。建议串行：A 改完通知 B，B 接手</div>
+
+  <h3>14.3 工序归属</h3>
+  <p>由于 <code>_meta.last_modified_by</code> 自动追溯，工序列表里能直观看到"工序 1-3 是结构工程师改的、4-8 是工艺员改的"，<strong>不需要额外加标签</strong>。</p>
+</section>
+
+<!-- ====================== 15. 自动更新 ====================== -->
+<section id="update">
+  <h2>15. 自动更新</h2>
+
+  <h3>15.1 工作原理</h3>
+  <ol class="steps">
+    <li>软件每次启动后约 1-2 秒，后台检查发版仓库是否有新版本</li>
+    <li>有新版 → 弹窗 <strong>"立即更新 / 暂不更新 / 跳过此版本"</strong></li>
+    <li>选立即更新 → updater 子程序接管，主程序退出</li>
+    <li>updater 自动：下载分卷 → 大小校验 → 解压 → 替换文件（<strong>保留 sop_packages 用户数据</strong>） → 启动新版本</li>
+  </ol>
+
+  <h3>15.2 升级时自动保留的数据</h3>
   <table>
     <thead><tr><th>目录</th><th>内容</th></tr></thead>
     <tbody>
-      <tr><td><code>products/</code></td><td>所有产品 YAML 文件（你的全部工序数据）</td></tr>
-      <tr><td><code>assets/images/</code></td><td>所有产品图片</td></tr>
-      <tr><td><code>output/</code></td><td>已经生成的 HTML/PDF（这个你可以自己定期清）</td></tr>
+      <tr><td><code>sop_packages/</code></td><td>所有 SOP 工程包（你的全部数据）</td></tr>
+      <tr><td><code>config/</code></td><td>用户名等应用配置</td></tr>
+      <tr><td><code>output/</code></td><td>批量导出的 HTML/PDF</td></tr>
+      <tr><td><code>_legacy_v1_backup/</code></td><td>v1.0.x 数据备份</td></tr>
     </tbody>
   </table>
 
-  <p>其他文件（<code>sop_generate.exe</code>、<code>_internal/</code>、<code>updater.exe</code> 等）会被新版本替换。</p>
+  <h3>15.3 手动检查更新</h3>
+  <p>工具栏 <span class="tb-btn">检查更新</span>，或者 <span class="tb-btn">帮助</span> 弹窗里点"检查更新"。</p>
 
-  <h3>10.3 手动检查更新</h3>
-  <p>如果不想等启动自动检查，可以随时点工具栏 <span class="tb-btn">检查更新</span>：</p>
+  <h3>15.4 帮助弹窗</h3>
+  <p>工具栏 <span class="tb-btn">帮助</span> 显示：</p>
   <ul>
-    <li>有新版 → 弹窗询问</li>
-    <li>已是最新 → 弹窗"当前 vX.Y.Z 已是最新"</li>
-    <li>网络异常 → 弹窗"无法连接，请检查网络"</li>
+    <li>当前版本号</li>
+    <li>当前用户名</li>
+    <li><strong>打开使用手册</strong>：用浏览器打开本说明</li>
+    <li><strong>检查更新</strong>：手动查询新版本</li>
   </ul>
-
-  <h3>10.4 跳过某个版本</h3>
-  <p>升级弹窗里选 <strong>"跳过此版本"</strong> 后，软件会记一个 <code>.skip_version</code> 文件，<strong>启动检查时</strong>不再提示这个版本。下次再有更新（更高版本）的版本仍会提示。</p>
 </section>
 
-<!-- ====================== 11. 数据迁移 ====================== -->
+<!-- ====================== 16. 数据迁移 ====================== -->
 <section id="migrate">
-  <h2>11. 数据迁移（旧版本升级到新版本）</h2>
+  <h2>16. 数据迁移</h2>
 
-  <p>大多数时候<strong>自动更新</strong>就够了。但如果你是<strong>全新装一个新版本</strong>（比如自动更新失败、换了电脑、想保留多个版本），需要手动迁移老数据。</p>
+  <h3>16.1 v1.0.x → v1.1.0 自动迁移</h3>
+  <p>v1.0.x 的目录结构是 <code>products/</code> + <code>assets/images/</code>，v1.1.0 改成统一的 <code>sop_packages/&lt;型号&gt;/</code>。</p>
 
-  <h3>11.1 用"导入旧数据"按钮（推荐）</h3>
+  <p>首次启动 v1.1.0 时，软件<strong>自动检测</strong>到老数据并弹窗：</p>
   <ol class="steps">
-    <li>解压新版本到一个新文件夹（例：<code>D:\sop_generate-v2.0.0\</code>）</li>
-    <li>启动新版本 <code>sop_generate.exe</code></li>
-    <li>点工具栏 <span class="tb-btn">导入旧数据</span></li>
-    <li>文件对话框里选<strong>老版本根目录</strong>（含 <code>products/</code> 子目录的那一层，例：<code>D:\sop_generate-v1.0.0\</code>）</li>
-    <li>点确定，软件自动复制：
+    <li>弹窗 <strong>"检测到 v1.0.x 的产品数据。是否一键迁移到新结构 sop_packages/？"</strong></li>
+    <li>点 <strong>"立即迁移"</strong>，软件自动：
       <ul>
-        <li>所有 <code>products/*.yaml</code></li>
-        <li>所有 <code>assets/images/&lt;产品&gt;/</code> 目录</li>
+        <li>把 <code>products/&lt;型号&gt;.yaml</code> 复制到 <code>sop_packages/&lt;型号&gt;/product.yaml</code></li>
+        <li>把 <code>assets/images/&lt;型号&gt;/</code> 复制到 <code>sop_packages/&lt;型号&gt;/images/</code></li>
+        <li>老目录 <code>products/</code> 和 <code>assets/</code> 搬到 <code>_legacy_v1_backup/&lt;时间戳&gt;/</code></li>
       </ul>
     </li>
-    <li>弹窗显示"导入 N 个 YAML + M 张图片"</li>
-    <li>左侧产品列表立即刷新</li>
+    <li>弹窗汇报"已迁移 N 个产品"</li>
+    <li>左侧产品列表显示迁移后的所有 SOP</li>
   </ol>
 
-  <div class="tip"><strong>同名文件不会被覆盖</strong>。比如新版本里已经有 <code>XESA01.yaml</code>（来自示例），从老版本导入同名 YAML 时会跳过保留新版的。如果想替换，需要先删除新版本里的同名文件再导入。</div>
+  <div class="info">老数据备份在 <code>_legacy_v1_backup/</code> 保留 <strong>1 个月</strong>。一个月后软件会自动清理，可以提前确认无误后手动删除整个目录释放空间。</div>
 
-  <h3>11.2 手动复制（不推荐）</h3>
-  <p>如果"导入旧数据"按钮不能用，可以手工操作：</p>
-  <ol class="steps">
-    <li>关闭新版本</li>
-    <li>用文件管理器进入老版本目录，复制 <code>products/</code> 和 <code>assets/images/</code> 两个文件夹</li>
-    <li>粘贴到新版本目录，提示<strong>是否覆盖</strong>时选<strong>是</strong>（你的数据覆盖示例数据）</li>
-    <li>启动新版本，左侧应该能看到老产品</li>
-  </ol>
-
-  <div class="danger">
-    <strong>千万不要</strong>用 7-Zip 直接把新版本解压<strong>覆盖</strong>到老版本目录！这样你的 <code>products/</code> 和 <code>assets/</code> 会被新版自带的示例数据覆盖掉。
-  </div>
-
-  <h3>11.3 删除老版本</h3>
-  <p>新版本正常工作后，老版本目录可以安全删除。建议<strong>保留 1-2 周</strong>确认无问题再删，万一新版有 bug 还能回滚。</p>
+  <h3>16.2 全新装新版本</h3>
+  <p>如果是从一台新电脑或者完全干净环境装新版本，可以用工具栏 <span class="tb-btn">导入旧数据</span> 选老版本根目录（含 <code>products/</code>），软件批量迁移过来。</p>
 </section>
 
-<!-- ====================== 12. 约束速查表 ====================== -->
-<section id="limits">
-  <h2>12. 字段约束速查表</h2>
+<!-- ====================== 17. 工程结构 ====================== -->
+<section id="structure">
+  <h2>17. 工程结构</h2>
 
-  <p>这份表给经常用软件的工艺员速查用。所有限制都是为了 <strong>A3 单页排版不被破坏</strong>。</p>
+  <p>v1.1.0 起每个 SOP 是一个独立的工程文件夹，所有相关数据都在里面：</p>
 
-  <table>
-    <thead>
-      <tr>
-        <th>字段</th>
-        <th>限制</th>
-        <th>超出怎么办</th>
-        <th>建议</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>processes</strong>（工序总数）</td>
-        <td>1-32 道</td>
-        <td>报错</td>
-        <td>流程图按 8 个/页自动分页</td>
-      </tr>
-      <tr>
-        <td><strong>operations</strong>（操作说明）</td>
-        <td>1-18 条/工序</td>
-        <td>报错</td>
-        <td>单页 6 条，超 6 自动拆页；推荐拆成多道工序</td>
-      </tr>
-      <tr>
-        <td><strong>notes</strong>（注意事项）</td>
-        <td>0-4 条/工序</td>
-        <td>报错</td>
-        <td>超出请把工序拆分</td>
-      </tr>
-      <tr>
-        <td><strong>tools</strong>（工具设备）</td>
-        <td>0-4 项/工序</td>
-        <td>报错</td>
-        <td>超出请把工序拆分</td>
-      </tr>
-      <tr>
-        <td><strong>materials</strong>（作业材料）</td>
-        <td>0-4 项/工序</td>
-        <td>报错</td>
-        <td>超出请把工序拆分</td>
-      </tr>
-      <tr>
-        <td><strong>images</strong>（图片）</td>
-        <td>1-4 张/工序</td>
-        <td>报错</td>
-        <td>1 张全占 / 2 张上下 / 3-4 张 2×2 网格</td>
-      </tr>
-      <tr>
-        <td>工序名</td>
-        <td>无硬限</td>
-        <td>自动换行</td>
-        <td>建议 ≤ 12 汉字</td>
-      </tr>
-      <tr>
-        <td>单条操作说明长度</td>
-        <td>无硬限</td>
-        <td>自动换行</td>
-        <td>建议 ≤ 30 汉字</td>
-      </tr>
-      <tr>
-        <td>单条注意事项长度</td>
-        <td>无硬限</td>
-        <td>自动换行</td>
-        <td>建议 ≤ 28 汉字</td>
-      </tr>
-      <tr>
-        <td>工具/材料单项长度</td>
-        <td>无硬限</td>
-        <td>溢出裁切</td>
-        <td>建议 ≤ 10 汉字</td>
-      </tr>
-    </tbody>
-  </table>
+  <pre><code>sop_generate-win/                  ← 软件根目录
+├── sop_generate.exe              ← 主程序
+├── updater.exe                   ← 升级程序
+├── _internal/                    ← 运行时库（不可删）
+├── 使用说明.html                  ← 本说明
+├── sop_packages/                 ← 所有 SOP 工程包（核心数据）
+│   ├── DEMO01/                   ← 一个 SOP 的所有数据
+│   │   ├── product.yaml          ← 工序内容 + _meta 追溯
+│   │   ├── images/               ← 工序图
+│   │   │   ├── step01.png
+│   │   │   └── ...
+│   │   └── output/               ← 生成的 HTML/PDF
+│   │       ├── DEMO01.html
+│   │       └── DEMO01.pdf
+│   └── XESA01/                   ← 另一个 SOP
+│       ├── product.yaml
+│       ├── images/
+│       └── output/
+├── config/
+│   └── current_user.json         ← 当前用户名
+├── _legacy_v1_backup/            ← v1.0.x 数据备份（自动生成，保留 1 月）
+└── output/                       ← CLI 批量导出的产物</code></pre>
 
-  <h3>12.1 关于"自动拆页"</h3>
-  <p>当一道工序的 operations 超过 6 条，软件自动把它拆成多个 PDF 页，每页 6 条，工序号保持不变，标记"<strong>续 N/M</strong>"。</p>
-
-  <table>
-    <thead><tr><th>原工序 operations 条数</th><th>拆成几页</th></tr></thead>
-    <tbody>
-      <tr><td>1-6 条</td><td>1 页（不拆）</td></tr>
-      <tr><td>7-12 条</td><td>2 页，标"续 1/2"、"续 2/2"</td></tr>
-      <tr><td>13-18 条</td><td>3 页，标"续 1/3" ... "续 3/3"</td></tr>
-    </tbody>
-  </table>
-
-  <p>拆页时图片<strong>每页都重复显示</strong>，注意事项 / 工具 / 材料只在第一页显示，续页写"见首页"。</p>
-
-  <div class="tip"><strong>能拆工序就别拆页</strong>。把"超长工序"拆成两道独立工序，可以让图片、注意事项、工具、材料各自配套，比续页清晰得多。</div>
+  <h3>17.1 文件组织优点</h3>
+  <ul>
+    <li><strong>整个文件夹就是一个 SOP</strong>，复制粘贴就能传递（zip 不需要打开看）</li>
+    <li><strong>图片和工序绑定</strong>，不会"YAML 改了图却忘了一起复制"</li>
+    <li><strong>输出物归类</strong>：生成的 HTML/PDF 跟着源文件，不混在一起</li>
+    <li><strong>升级安全</strong>：自动更新只会替换软件本体，<code>sop_packages/</code> 永远保留</li>
+  </ul>
 </section>
 
-<!-- ====================== 13. 常见问题 ====================== -->
+<!-- ====================== 18. 常见问题 ====================== -->
 <section id="faq">
-  <h2>13. 常见问题（FAQ）</h2>
+  <h2>18. 常见问题（FAQ）</h2>
 
   <h3>Q1：YAML 是什么？我能编辑吗？</h3>
-  <p>YAML 是软件用来存储产品数据的文本文件，纯文本，用记事本/VS Code 能打开。普通用户<strong>不要直接编辑</strong>，请用软件 GUI。但如果想批量处理（比如全局替换某个工具名），可以用 VS Code 打开 <code>products/&lt;型号&gt;.yaml</code> 修改。</p>
+  <p>YAML 是软件用来存储产品数据的文本文件，纯文本，用记事本/VS Code 能打开。普通用户<strong>不要直接编辑</strong>，请用软件 GUI。</p>
 
   <h3>Q2：能在 Word 里继续编辑导出的 PDF 吗？</h3>
-  <p>不可以。本工具的输出是<strong>固定排版的 PDF</strong>，不是 Word 文档。如果客户要 Word 格式，建议把 PDF 当附件，或者截图嵌入到客户的 Word 模板。</p>
+  <p>不可以。本工具的输出是<strong>固定排版的 PDF</strong>，不是 Word 文档。</p>
 
   <h3>Q3：能改模板样式吗？比如换公司 Logo？</h3>
-  <p>软件 GUI 暂不支持改模板。如果需要改：</p>
-  <ul>
-    <li>简单的颜色/字号 → 让 IT 找软件维护者改 <code>templates/style.css.j2</code></li>
-    <li>加 Logo / 改封面布局 → 同上，改 <code>templates/cover.html.j2</code></li>
-    <li>这些改动会作为新版本发布，所有用户自动接收</li>
-  </ul>
+  <p>软件 GUI 暂不支持改模板。如需修改请联系 <strong>徐亚彬</strong>。</p>
 
-  <h3>Q4：同一台电脑两个人轮流用，数据会混吗？</h3>
-  <p>不会混，但<strong>没有用户隔离</strong>。两人共用 <code>products/</code> 和 <code>assets/images/</code>。建议：</p>
-  <ul>
-    <li>不同人用<strong>不同产品型号前缀</strong>（例：<code>XESA-XX-01</code>、<code>RX-XX-01</code>）</li>
-    <li>或者每人在自己电脑账户下装一份</li>
-  </ul>
+  <h3>Q4：同一台电脑两个人轮流用，怎么区分？</h3>
+  <p>换用户时点 <span class="tb-btn">设置用户名</span> 改名，之后新的修改会记录新用户名。<strong>不会改老工序的记录</strong>。如果完全独立，建议每人在自己 Windows 账户下装一份。</p>
 
   <h3>Q5：升级以后旧 PDF 还能打开吗？</h3>
-  <p>能。已经导出的 PDF 是独立文件，和软件没关系。升级软件不影响老 PDF。</p>
+  <p>能。已经导出的 PDF 是独立文件，和软件无关。</p>
 
-  <h3>Q6：可以批量导出多个产品的 PDF 吗？</h3>
-  <p>GUI 暂时一次一个。如果想批量，让 IT 跑命令行：</p>
-  <pre><code>cd /path/to/sop_generate
-.venv/bin/python gen.py products/*.yaml --pdf</code></pre>
-  <p>会把所有产品全部导出。</p>
+  <h3>Q6：能批量导出多个 SOP 的 PDF 吗？</h3>
+  <p>GUI 一次一个。批量请联系 <strong>徐亚彬</strong> 跑命令行：</p>
+  <pre><code>python gen.py DEMO01 XESA01 XESA02 --pdf
+# 或
+python gen.py sop_packages/*/product.yaml --pdf</code></pre>
 
   <h3>Q7：能离线使用吗？</h3>
-  <p>软件本身完全离线工作。<strong>需要联网的只有两件事</strong>：</p>
-  <ul>
-    <li>启动时检查更新（网络异常会静默跳过，不影响使用）</li>
-    <li>下载新版本（需要的时候才下）</li>
-  </ul>
-  <p>编辑产品、生成 PDF 等所有核心功能都不需要网络。</p>
+  <p>软件核心功能完全离线。只有这两件事需要网络：启动时检查更新 / 下载新版本。编辑、生成 PDF 全部不需要网络。</p>
 
   <h3>Q8：导出的 PDF 是 A3 大小，公司只有 A4 打印机怎么办？</h3>
-  <p>打印对话框里选 <strong>"缩放" → "适合页面"</strong> 或者 <strong>"50%"</strong>，可以把 A3 缩到 A4 打印。但字会变小。建议：</p>
-  <ul>
-    <li><strong>能用 A3 打印机就用 A3</strong>（多数公司有彩印 A3）</li>
-    <li>只能 A4 的话，<strong>分页打印</strong>：A3 横向页打印 2 张 A4 拼起来</li>
-  </ul>
+  <p>打印对话框里选 <strong>"缩放 → 适合页面"</strong>，可把 A3 缩到 A4 打印（字会变小）。建议优先用 A3 打印机。</p>
+
+  <h3>Q9：归档后 sop_packages 里的 SOP 还要留着吗？</h3>
+  <p>建议留着。归档物在另一个目录里（你选的归档输出文件夹），是<strong>定稿快照</strong>。<code>sop_packages/</code> 里的是工作副本，可以继续迭代下个版本。</p>
+
+  <h3>Q10：忘了设用户名直接用了软件，记录会怎样？</h3>
+  <p>没设用户名什么都做不了，软件会强制弹窗让你设置。如果误填了名字（写错字），后续修改 SOP 时会记新名字，但<strong>老的修改记录不会改</strong>。</p>
 </section>
 
-<!-- ====================== 14. 故障排查 ====================== -->
+<!-- ====================== 19. 故障排查 ====================== -->
 <section id="trouble">
-  <h2>14. 故障排查</h2>
+  <h2>19. 故障排查</h2>
 
-  <h3>14.1 软件启动报错</h3>
+  <h3>19.1 软件启动报错</h3>
   <table>
     <thead><tr><th>现象</th><th>原因</th><th>解决</th></tr></thead>
     <tbody>
@@ -1136,89 +1115,80 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
       <tr>
         <td>"sop_generate 已损坏，无法打开"（Mac）</td>
         <td>苹果安全机制</td>
-        <td>系统设置 → 隐私与安全性 → 找到 sop_generate → 仍要打开</td>
+        <td>系统设置 → 隐私与安全性 → 仍要打开</td>
       </tr>
       <tr>
-        <td>Defender 阻止</td>
+        <td>Defender 阻止（Win）</td>
         <td>未签名应用</td>
         <td>"更多信息 → 仍要运行"</td>
       </tr>
     </tbody>
   </table>
 
-  <h3>14.2 导出 PDF 失败</h3>
+  <h3>19.2 导出 PDF 失败</h3>
   <table>
     <thead><tr><th>错误信息</th><th>原因</th><th>解决</th></tr></thead>
     <tbody>
       <tr>
         <td>"未找到 Chrome / Edge"</td>
         <td>本机没装支持的浏览器</td>
-        <td>装 Microsoft Edge 或 Google Chrome（任一即可）</td>
+        <td>装 Microsoft Edge 或 Google Chrome</td>
       </tr>
       <tr>
-        <td>导出后 PDF 是空白页</td>
+        <td>PDF 是空白页</td>
         <td>浏览器版本太旧</td>
         <td>更新 Edge / Chrome 到最新版</td>
       </tr>
       <tr>
         <td>PDF 里图片不显示</td>
-        <td>图片文件丢失或路径错</td>
-        <td>检查 <code>assets/images/&lt;型号&gt;/</code> 下文件存在，且 YAML 里文件名拼写正确</td>
+        <td>图片路径错</td>
+        <td>检查 <code>sop_packages/&lt;型号&gt;/images/</code> 下文件存在，且工序的 <code>images</code> 字段名拼写正确</td>
       </tr>
     </tbody>
   </table>
 
-  <h3>14.3 自动更新失败</h3>
+  <h3>19.3 自动更新失败</h3>
   <table>
     <thead><tr><th>现象</th><th>解决</th></tr></thead>
     <tbody>
       <tr>
         <td>"无法连接到 Gitee"</td>
-        <td>检查网络连接；如果公司有代理，让 IT 配置允许访问 gitee.com</td>
+        <td>检查网络；公司内网代理需 IT 配置允许 gitee.com</td>
       </tr>
       <tr>
-        <td>升级中途网络断了</td>
-        <td>关闭 updater 窗口，重启软件，重新点更新（已下载的分卷会自动续传）</td>
+        <td>下载中途断网</td>
+        <td>关掉 updater 窗口，重启软件，重新点更新（已下载的分卷会自动续传）</td>
       </tr>
       <tr>
         <td>升级后软件打不开</td>
-        <td>用"导入旧数据"方式手动装新版本（见<a href="#migrate">第 11 章</a>）</td>
+        <td>手动重装：下载新版本到隔壁目录，用 <span class="tb-btn">导入 SOP 包</span> 把老 SOP 导入新版本</td>
       </tr>
     </tbody>
   </table>
 
-  <h3>14.4 工序拆页或截断异常</h3>
-  <p>极少数情况会出现"工序被截断"或"PDF 底部有灰条"。如果遇到：</p>
-  <ol class="steps">
-    <li>截图保留</li>
-    <li>记录是哪个产品、哪道工序</li>
-    <li>联系 IT 反馈</li>
-  </ol>
-
-  <h3>14.5 求助渠道</h3>
+  <h3>19.4 求助联系</h3>
   <div class="card">
     <p><strong>使用问题</strong>（不会用、想批量、想改模板）：</p>
     <ul>
-      <li>📧 联系：IT 支持 / 软件维护人</li>
-      <li>💬 内部群：xxx 微信群 / 钉钉群</li>
+      <li>📧 联系：<strong>徐亚彬</strong></li>
     </ul>
     <p><strong>报 Bug</strong>：</p>
     <ul>
-      <li>截图、说明操作步骤、给出复现方法</li>
-      <li>从 <code>products/&lt;型号&gt;.yaml</code> 复制相关产品的 YAML 内容（如果涉及数据）</li>
+      <li>截图、说明操作步骤、给出复现方法 → 发给 <strong>徐亚彬</strong></li>
+      <li>从 <code>sop_packages/&lt;型号&gt;/product.yaml</code> 复制相关 SOP 内容（如果涉及数据）</li>
+      <li>遇到问题时点 <span class="tb-btn">帮助</span> 看一下版本号，附在反馈里</li>
     </ul>
   </div>
 </section>
 
 <footer style="margin-top: 80px; padding-top: 30px; border-top: 2px solid var(--border); color: var(--muted); font-size: 13px; text-align: center;">
-  <p>sop_generate · 标准化作业指导书生成器</p>
+  <p>SOP Generate · 标准化作业指导书生成器</p>
   <p>本说明文档随软件分发，可用浏览器打开或打印为纸质手册。</p>
 </footer>
 
 </main>
 
 <script>
-  // 滚动时自动高亮当前章节
   const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('.sidebar nav a');
   function onScroll() {

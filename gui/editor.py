@@ -71,6 +71,12 @@ class ProcessEditor(QWidget):
         self.img_editor.changed.connect(self._mark_changed)
         v.addWidget(self.img_editor)
 
+        # 修改追溯标签（底部）
+        from PySide6.QtWidgets import QLabel
+        self._meta_label = QLabel("")
+        self._meta_label.setStyleSheet("color: #888; font-size: 11px; padding-top: 6px;")
+        v.addWidget(self._meta_label)
+
         v.addStretch()
 
     def set_product_image_dir_provider(self, fn) -> None:
@@ -101,6 +107,16 @@ class ProcessEditor(QWidget):
         self.tools_editor.set_items(proc.get("tools") or [])
         self.mats_editor.set_items(proc.get("materials") or [])
         self.img_editor.set_images(proc.get("images") or [])
+        # 显示修改追溯
+        meta = proc.get("_meta") or {}
+        if hasattr(self, "_meta_label"):
+            cby = meta.get("created_by", "—")
+            cat = meta.get("created_at", "")[:16].replace("T", " ")
+            mby = meta.get("last_modified_by", "—")
+            mat = meta.get("last_modified_at", "")[:16].replace("T", " ")
+            self._meta_label.setText(
+                f"创建：{cby}  {cat}　│　最后修改：{mby}  {mat}"
+            )
 
     def commit(self) -> None:
         """把编辑器内容写回 _proc 字典（in-place）。"""

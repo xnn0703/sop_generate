@@ -18,6 +18,17 @@ packaging/icon_pngs/
 # ===== 运行时输出 =====
 output/
 
+# ===== 应用级本地配置（含用户名）=====
+config/
+
+# ===== v1.0.x 老数据备份（不入仓）=====
+_legacy_v1_backup/
+products/
+assets/
+
+# ===== SOP 工程包里各产品的 output（生成产物不入仓）=====
+sop_packages/*/output/
+
 # ===== 临时测试数据（_ 前缀但非 _schema）=====
 products/_test_*.yaml
 assets/images/TEST*/

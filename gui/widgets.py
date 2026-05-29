@@ -8,16 +8,17 @@ from PySide6.QtWidgets import (
 )
 
 class ListEditor(QWidget):
-    """每行一项的列表编辑器。仅在数量超限时红字提示；单条长度交给 CSS 自动裁切。"""
+    """每行一项的列表编辑器。无硬限，超出 per_page 时灰字提示会自动分页。"""
 
     changed = Signal()
 
-    def __init__(self, title: str, max_items: int,
-                 max_len_cn: int | None = None,   # 保留参数以兼容现有调用，不再使用
+    def __init__(self, title: str, max_items: int | None = None,
+                 max_len_cn: int | None = None,   # 兼容旧调用，已不使用
+                 per_page: int | None = None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.title = title
-        self.max_items = max_items
+        self.per_page = per_page or max_items   # 把旧的 max_items 当作 per_page 显示
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -34,7 +35,10 @@ class ListEditor(QWidget):
 
         self.edit = QPlainTextEdit()
         self.edit.setWordWrapMode(QTextOption.WordWrap)
-        self.edit.setPlaceholderText(f"每行一项，最多 {max_items} 项")
+        if self.per_page:
+            self.edit.setPlaceholderText(f"每行一项；超过 {self.per_page} 条会自动分页显示")
+        else:
+            self.edit.setPlaceholderText("每行一项")
         self.edit.textChanged.connect(self._on_changed)
         layout.addWidget(self.edit)
 
@@ -57,10 +61,15 @@ class ListEditor(QWidget):
 
     def _refresh_status(self) -> None:
         n = len(self.items())
-        is_error = n > self.max_items
-        color = "#c00" if is_error else "#888"
-        self.status.setStyleSheet(f"color: {color}; font-size: 11px;")
-        self.status.setText(f"{n}/{self.max_items} 项" + ("  超" if is_error else ""))
+        if self.per_page:
+            pages = max(1, -(-n // self.per_page)) if n else 0
+            msg = f"{n} 项"
+            if n > self.per_page:
+                msg += f"（将分 {pages} 页）"
+            self.status.setStyleSheet("color: #888; font-size: 11px;")
+            self.status.setText(msg)
+        else:
+            self.status.setText(f"{n} 项")
 
 
 class ImageListEditor(QWidget):
@@ -77,9 +86,9 @@ class ImageListEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         header = QHBoxLayout()
-        self.label = QLabel("图片（拖入文件；1-4 张：1 张全占 / 2 张上下 / 3-4 张 2×2 网格）")
+        self.label = QLabel("图片（拖入文件；超过 4 张自动分页显示，每页 4 张 2×2）")
         self.label.setStyleSheet("font-weight: bold;")
-        self.status = QLabel("0/2 张")
+        self.status = QLabel("0 张")
         self.status.setStyleSheet("color: #888; font-size: 11px;")
         header.addWidget(self.label)
         header.addStretch()
@@ -118,9 +127,10 @@ class ImageListEditor(QWidget):
 
     def _refresh_status(self) -> None:
         n = len(self.items())
-        color = "#888" if 1 <= n <= 2 else "#c00"
-        self.status.setStyleSheet(f"color: {color}; font-size: 11px;")
-        self.status.setText(f"{n}/2 张")
+        pages = max(1, -(-n // 4)) if n else 0
+        msg = f"{n} 张" + (f"（将分 {pages} 页）" if n > 4 else "")
+        self.status.setStyleSheet("color: #888; font-size: 11px;")
+        self.status.setText(msg)
 
     def _drag_enter(self, event) -> None:
         if event.mimeData().hasUrls():

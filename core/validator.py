@@ -1,7 +1,9 @@
-"""YAML 字段约束校验。
+"""YAML 字段校验
 
-约束阈值集中在本模块顶部，便于 GUI 实时高亮和 CLI 校验复用。
-所有错误信息使用中文。
+v1.1.0 起：移除所有数量/字符长度硬限制。
+- 字段超出单页容量 → 自动分页（renderer 处理）
+- 单元格 overflow:hidden 兜底
+- 仅校验必填字段、格式、图片存在性
 """
 from __future__ import annotations
 
@@ -11,26 +13,35 @@ from pathlib import Path
 from typing import Any
 
 
-# =============== 字段约束 ===============
-# 长度类不再硬限：单元格 overflow:hidden 自动裁切；只校验"数量"类硬约束。
-OPS_PER_PAGE         = 6    # 单页能放下的操作说明 条数（超过自动拆页）
-MAX_OPS              = 18   # 操作说明 条数上限（最多拆 3 页）
-MAX_NOTES            = 4    # 注意事项 条数上限（超过请拆工序）
-MAX_TOOLS            = 4    # 工具设备 项数上限
-MAX_MATS             = 4    # 作业材料 项数上限
-MAX_IMAGES           = 4    # 图片张数上限（1 全占 / 2 上下 / 3-4 2×2 网格）
-MIN_IMAGES           = 1    # 图片张数下限
-MAX_PROCESSES        = 32   # 工序总数上限（流程图会自动分页）
-PROCESSES_PER_FLOW_PAGE = 8   # 工艺流程图单页最多节点数（保守值，允许多个工序名换行 2-3 行）
+# =============== 单页容量（用于自动分页计算）===============
+OPS_PER_PAGE   = 6    # 操作说明 每页
+NOTES_PER_PAGE = 4    # 注意事项 每页
+TOOLS_PER_PAGE = 4    # 工具设备 每页
+MATS_PER_PAGE  = 4    # 作业材料 每页
+IMAGES_PER_PAGE = 4   # 图片 每页（4 张 2×2）
+PROCESSES_PER_FLOW_PAGE = 8   # 工艺流程图 每页
 
 DATE_RE    = re.compile(r"^\d{4}-\d{1,2}-\d{1,2}$")
 VERSION_RE = re.compile(r"^[A-Z]/\d+$")
-MODEL_RE   = re.compile(r"^[A-Za-z0-9_-]+$")
+# 文件系统不允许的字符（用作文件夹/文件名时）
+FS_FORBIDDEN = set('\\/:*?"<>|')
+
+
+def _check_filename_safe(name: str) -> str | None:
+    """检查字符串是否能安全用作文件夹/文件名。返回错误信息或 None。"""
+    bad = sorted({c for c in name if c in FS_FORBIDDEN or ord(c) < 32})
+    if bad:
+        return f"含文件系统不允许的字符 {''.join(bad)!r}"
+    if name.startswith(".") or name.endswith(".") or name.endswith(" "):
+        return "不能以 . 开头或以 . / 空格结尾"
+    if name.lower() in {"con","prn","aux","nul","com1","com2","com3","com4",
+                        "com5","com6","com7","com8","com9","lpt1","lpt2",
+                        "lpt3","lpt4","lpt5","lpt6","lpt7","lpt8","lpt9"}:
+        return f"是 Windows 保留名，请换一个"
+    return None
 
 
 class ValidationError(Exception):
-    """校验失败异常。errors 为字符串列表（中文）。"""
-
     def __init__(self, errors: list[str], warnings: list[str] | None = None) -> None:
         self.errors = errors
         self.warnings = warnings or []
@@ -47,26 +58,11 @@ class ValidationResult:
         return not self.errors
 
 
-def _cn_len(s: str) -> int:
-    """汉字按 1 计、半角字符按 0.5 计的近似字符长度。"""
-    n = 0.0
-    for ch in s:
-        if '一' <= ch <= '鿿' or ch in '，。；：、（）！？""''':
-            n += 1
-        else:
-            n += 0.5
-    return int(round(n))
-
-
 def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationResult:
-    """校验 YAML 字典。返回 ValidationResult。
-
-    yaml_path 用于解析图片相对路径（assets/images/<model>/ 是否存在）。
-    """
+    """校验 YAML 字典。仅校验必填、格式、图片存在性；不再硬限数量。"""
     errors: list[str] = []
     warnings: list[str] = []
 
-    # ===== product 段 =====
     if not isinstance(data, dict):
         errors.append("YAML 根必须是字典")
         return ValidationResult(errors, warnings)
@@ -82,8 +78,10 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
             errors.append(f"product.{k} 缺失或为空")
 
     model = product.get("model", "")
-    if model and not MODEL_RE.match(model):
-        errors.append(f"product.model 只能含字母数字/下划线/横线，得到 {model!r}")
+    if model:
+        err = _check_filename_safe(model)
+        if err:
+            errors.append(f"product.model {err}：{model!r}")
 
     for k in ("publish_date", "effective_date"):
         v = product.get(k, "")
@@ -94,59 +92,49 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
     if version and not VERSION_RE.match(version):
         warnings.append(f"product.version 建议形如 A/0、B/1，得到 {version!r}")
 
-    # ===== processes 段 =====
     processes = data.get("processes")
     if not isinstance(processes, list) or not processes:
         errors.append("processes 必须是非空列表")
         return ValidationResult(errors, warnings)
 
-    if len(processes) > MAX_PROCESSES:
-        errors.append(f"processes 数量 {len(processes)} 超过上限 {MAX_PROCESSES}")
-
+    # 定位图片目录（v1.1.0 / v1.0.x 兼容）
     img_root: Path | None = None
-    if yaml_path and model:
-        img_root = yaml_path.parent.parent / "assets" / "images" / model
+    if yaml_path:
+        if yaml_path.name == "product.yaml":
+            img_root = yaml_path.parent / "images"
+        elif yaml_path.parent.name == "products" and model:
+            img_root = yaml_path.parent.parent / "assets" / "images" / model
 
     for i, proc in enumerate(processes, start=1):
         prefix = f"processes[{i}]({proc.get('name', '<无名>')})"
-
         if not isinstance(proc, dict):
             errors.append(f"{prefix} 必须是字典")
             continue
-
-        pname = proc.get("name", "")
-        if not pname:
+        if not proc.get("name"):
             errors.append(f"{prefix}.name 缺失")
-
-        ops = proc.get("operations") or []
-        if not ops:
+        if not (proc.get("operations") or []):
             errors.append(f"{prefix}.operations 不能为空")
-        if len(ops) > MAX_OPS:
-            errors.append(f"{prefix}.operations 条数 {len(ops)} 超过上限 {MAX_OPS}")
-        elif len(ops) > OPS_PER_PAGE:
-            n_pages = (len(ops) + OPS_PER_PAGE - 1) // OPS_PER_PAGE
-            warnings.append(f"{prefix}.operations 条数 {len(ops)} 超过单页容量 {OPS_PER_PAGE}，将自动拆成 {n_pages} 页")
-
-        notes = proc.get("notes") or []
-        if len(notes) > MAX_NOTES:
-            errors.append(f"{prefix}.notes 条数 {len(notes)} 超过上限 {MAX_NOTES}")
-
-        for key, limit in (("tools", MAX_TOOLS), ("materials", MAX_MATS)):
-            items = proc.get(key) or []
-            if len(items) > limit:
-                errors.append(f"{prefix}.{key} 项数 {len(items)} 超过上限 {limit}")
 
         images = proc.get("images") or []
-        if len(images) > MAX_IMAGES:
-            errors.append(
-                f"{prefix}.images 张数 {len(images)} 超过上限 {MAX_IMAGES}；"
-                "建议把当前工序拆成多道工序，每道 1-2 张图（多图会影响显示效果）"
-            )
-        elif len(images) < MIN_IMAGES:
-            errors.append(f"{prefix}.images 至少需要 {MIN_IMAGES} 张")
+        # 允许工序没有图片（v1.1.0 起去除"至少 1 张"的硬性要求）
         if img_root is not None:
             for img in images:
                 if not (img_root / img).exists():
                     errors.append(f"{prefix} 图片不存在：{img_root / img}")
+
+        # 容量超出提示（不是错误，渲染时会自动分页）
+        for fname, limit, name in [
+            ("operations", OPS_PER_PAGE,   "操作说明"),
+            ("notes",      NOTES_PER_PAGE, "注意事项"),
+            ("tools",      TOOLS_PER_PAGE, "工具设备"),
+            ("materials",  MATS_PER_PAGE,  "作业材料"),
+            ("images",     IMAGES_PER_PAGE, "图片"),
+        ]:
+            n = len(proc.get(fname) or [])
+            if n > limit:
+                pages = (n + limit - 1) // limit
+                warnings.append(
+                    f"{prefix}.{name} 共 {n} 条，超过单页 {limit}，将自动分 {pages} 页显示"
+                )
 
     return ValidationResult(errors, warnings)

@@ -1,8 +1,10 @@
-{#- 单个工序详情页（横向 A4，支持自动拆页）-#}
-{#- 输入：proc（含 _proc_index / _ops_chunk / _sub_index / _sub_total / _is_continuation）, product, total -#}
+{#- 单个工序详情页（横向 A3，齐头分页：每页各字段独立切片）-#}
+{#- 输入：proc（含 _proc_index / _sub_index / _sub_total / _is_continuation / _ops_chunk / _notes_chunk / _tools_chunk / _mats_chunk / _images_chunk / _*_start_index）-#}
 {%- set sub_total = proc._sub_total -%}
 {%- set sub_index = proc._sub_index -%}
 {%- set is_cont   = proc._is_continuation -%}
+{%- set images = proc._images_chunk -%}
+{%- set n_imgs = images | length -%}
 <section class="page page-landscape">
   <div class="sheet">
   <table class="proc">
@@ -26,7 +28,7 @@
       <td class="h-value">{{ product.model }}</td>
       <td class="h-value">
         {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}
-        {%- if sub_total > 1 %} <small>（续 {{ sub_index }}/{{ sub_total }}）</small>{% endif %}
+        {%- if sub_total > 1 %} <small>（{{ sub_index }}/{{ sub_total }}）</small>{% endif %}
       </td>
       <td class="h-value">{{ product.doc_id }}</td>
       <td class="h-value">{{ product.version }}</td>
@@ -37,21 +39,26 @@
     <tr>
       <td class="ops-cell ops-main" colspan="3">
         <div class="sec-title">
-          操作说明{% if sub_total > 1 %}（第 {{ sub_index }} 部分 / 共 {{ sub_total }} 部分）{% endif %}：
+          操作说明{% if sub_total > 1 %}（{{ sub_index }}/{{ sub_total }}）{% endif %}：
         </div>
-        <ol{% if is_cont %} start="{{ (sub_index - 1) * 6 + 1 }}"{% endif %}>
+        {%- if proc._ops_chunk %}
+        <ol start="{{ proc._ops_start_index }}">
           {%- for op in proc._ops_chunk %}
           <li>{{ op }}</li>
           {%- endfor %}
         </ol>
+        {%- else %}
+        <div class="cont-overlay">（无内容）</div>
+        {%- endif %}
       </td>
-      {%- set n_imgs = proc.images | length %}
       <td class="pic-cell imgs-{{ n_imgs }}" colspan="5" rowspan="3">
-        {%- if n_imgs == 1 %}
-        <img src="{{ image_base }}/{{ proc.images[0] }}" alt="{{ proc.name }}">
+        {%- if n_imgs == 0 %}
+        &nbsp;
+        {%- elif n_imgs == 1 %}
+        <img src="{{ image_base }}/{{ images[0] }}" alt="{{ proc.name }}">
         {%- else %}
         <div class="imgs">
-          {%- for img in proc.images %}
+          {%- for img in images %}
           <img src="{{ image_base }}/{{ img }}" alt="{{ proc.name }}-{{ loop.index }}">
           {%- endfor %}
         </div>
@@ -61,11 +68,13 @@
 
     <tr>
       <td class="ops-cell ops-note" colspan="3">
-        <div class="sec-title">注意事项{% if is_cont %}（见首页）{% endif %}：</div>
-        {%- if not is_cont %}
+        <div class="sec-title">
+          注意事项{% if sub_total > 1 and proc._notes_chunk %}（{{ sub_index }}/{{ sub_total }}）{% endif %}：
+        </div>
+        {%- if proc._notes_chunk %}
         <div class="notes">
-          {%- for note in proc.notes %}
-          <p>{{ loop.index | circled }} {{ note }}</p>
+          {%- for note in proc._notes_chunk %}
+          <p>{{ (proc._notes_start_index + loop.index0) | circled }} {{ note }}</p>
           {%- endfor %}
         </div>
         {%- endif %}
@@ -75,20 +84,18 @@
     <tr>
       <td class="mat-cell" colspan="3">
         <table class="mat">
-          {%- if is_cont %}
-          <tr><td colspan="6" style="text-align:center;color:#888;padding:4mm;">工具设备 / 作业材料 见首页</td></tr>
-          {%- else %}
+          {%- set tools_chunk = proc._tools_chunk %}
+          {%- set mats_chunk  = proc._mats_chunk %}
           {%- for i in range(4) %}
           <tr>
             {%- if loop.first %}<td class="cat" rowspan="4">工具设备</td>{%- endif %}
-            <td class="idx">{{ i + 1 }}</td>
-            <td class="txt">{{ proc.tools[i] if i < (proc.tools | length) else '' }}</td>
+            <td class="idx">{{ proc._tools_start_index + i }}</td>
+            <td class="txt">{{ tools_chunk[i] if i < (tools_chunk | length) else '' }}</td>
             {%- if loop.first %}<td class="cat" rowspan="4">作业材料</td>{%- endif %}
-            <td class="idx">{{ i + 1 }}</td>
-            <td class="txt">{{ proc.materials[i] if i < (proc.materials | length) else '' }}</td>
+            <td class="idx">{{ proc._mats_start_index + i }}</td>
+            <td class="txt">{{ mats_chunk[i] if i < (mats_chunk | length) else '' }}</td>
           </tr>
           {%- endfor %}
-          {%- endif %}
         </table>
       </td>
     </tr>

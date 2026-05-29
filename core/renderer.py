@@ -9,8 +9,11 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
 from . import paths
-from .paths import ASSETS_DIR, OUTPUT_DIR, TEMPLATES_DIR  # noqa: F401（向后兼容导出）
-from .validator import OPS_PER_PAGE, PROCESSES_PER_FLOW_PAGE
+from .paths import OUTPUT_DIR, TEMPLATES_DIR  # noqa: F401（向后兼容导出）
+from .validator import (
+    OPS_PER_PAGE, NOTES_PER_PAGE, TOOLS_PER_PAGE, MATS_PER_PAGE,
+    IMAGES_PER_PAGE, PROCESSES_PER_FLOW_PAGE,
+)
 
 
 # ===== Jinja2 自定义 filter =====
@@ -58,6 +61,7 @@ _PROC_DEFAULTS: dict[str, Any] = {
     "images": [],
     "tools": [],
     "materials": [],
+    "_meta": None,
 }
 
 
@@ -71,23 +75,48 @@ def _normalize_processes(processes: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 def _expand_process_pages(processes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """把工序列表展开为渲染页列表。
-    operations 超过单页容量时自动拆成多页：第 1 页含完整结构（图、工具、材料、注意事项），
-    续页只显示 operations 续写，工序号保持不变，标记 (续 N/M)。
+    """齐头分页：每道工序按 max(各字段需要页数) 拆成多页，每页同时显示
+    operations / notes / tools / materials / images 各自的当前批次。
     """
     pages: list[dict[str, Any]] = []
     for proc_idx, proc in enumerate(processes, start=1):
-        ops = proc.get("operations") or []
-        chunks = [ops[i:i + OPS_PER_PAGE] for i in range(0, len(ops), OPS_PER_PAGE)] or [[]]
-        total = len(chunks)
-        for sub_i, chunk in enumerate(chunks, start=1):
+        ops    = proc.get("operations") or []
+        notes  = proc.get("notes") or []
+        tools  = proc.get("tools") or []
+        mats   = proc.get("materials") or []
+        images = proc.get("images") or []
+
+        def _pages(items: list, per: int) -> int:
+            return max(1, -(-len(items) // per)) if items else 1
+
+        total = max(
+            _pages(ops, OPS_PER_PAGE),
+            _pages(notes, NOTES_PER_PAGE),
+            _pages(tools, TOOLS_PER_PAGE),
+            _pages(mats, MATS_PER_PAGE),
+            _pages(images, IMAGES_PER_PAGE),
+        )
+
+        def _slice(items: list, per: int, page_i: int) -> list:
+            start = (page_i - 1) * per
+            return items[start:start + per]
+
+        for page_i in range(1, total + 1):
             pages.append({
                 **proc,
-                "_proc_index":     proc_idx,
-                "_ops_chunk":      chunk,
-                "_sub_index":      sub_i,
-                "_sub_total":      total,
-                "_is_continuation": sub_i > 1,
+                "_proc_index":      proc_idx,
+                "_sub_index":       page_i,
+                "_sub_total":       total,
+                "_is_continuation": page_i > 1,
+                "_ops_chunk":       _slice(ops,    OPS_PER_PAGE,    page_i),
+                "_notes_chunk":     _slice(notes,  NOTES_PER_PAGE,  page_i),
+                "_tools_chunk":     _slice(tools,  TOOLS_PER_PAGE,  page_i),
+                "_mats_chunk":      _slice(mats,   MATS_PER_PAGE,   page_i),
+                "_images_chunk":    _slice(images, IMAGES_PER_PAGE, page_i),
+                "_ops_start_index": (page_i - 1) * OPS_PER_PAGE + 1,
+                "_notes_start_index": (page_i - 1) * NOTES_PER_PAGE + 1,
+                "_tools_start_index": (page_i - 1) * TOOLS_PER_PAGE + 1,
+                "_mats_start_index":  (page_i - 1) * MATS_PER_PAGE + 1,
             })
     return pages
 
@@ -101,15 +130,15 @@ def _split_flow_chunks(processes: list[dict[str, Any]],
 def render_manual(data: ProductData, image_base: str | None = None) -> str:
     """渲染完整 HTML。
 
-    image_base: HTML 中图片 src 前缀，默认指向项目内 assets/images/<model>/。
+    image_base: HTML 中图片 src 前缀。
+      默认（v1.1.0）：HTML 在 sop_packages/<model>/output/，图片在 sop_packages/<model>/images/
+      → 相对路径 ../images
     """
     env = _make_env()
     template = env.get_template("manual.html.j2")
 
     if image_base is None:
-        # 默认：HTML 输出在 output/，图片在 assets/images/<model>/
-        model = data.product.get("model", "")
-        image_base = f"../assets/images/{model}"
+        image_base = "../images"
 
     procs = _normalize_processes(data.processes)
     process_pages = _expand_process_pages(procs)
@@ -126,13 +155,18 @@ def render_manual(data: ProductData, image_base: str | None = None) -> str:
 
 def write_html(data: ProductData, output_path: Path | None = None,
                image_base: str | None = None) -> Path:
-    """渲染并写入 HTML 文件。返回最终路径。"""
+    """渲染并写入 HTML 文件。返回最终路径。
+
+    默认输出到 sop_packages/<model>/output/<model>.html
+    """
     html = render_manual(data, image_base=image_base)
 
     if output_path is None:
         model = data.product.get("model", "manual")
-        paths.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        output_path = paths.OUTPUT_DIR / f"{model}.html"
+        out_dir = paths.sop_output_dir(model)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        output_path = out_dir / f"{model}.html"
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html, encoding="utf-8")
     return output_path
