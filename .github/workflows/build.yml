@@ -302,29 +302,38 @@ jobs:
       - name: 上传 macOS 分卷到 Gitee Release（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
         run: |
-          set -e
+          # 不用 set -e，让 curl 失败时能进入重试循环（不直接退出脚本）
           TAG="${GITHUB_REF##*/}"
           API="https://gitee.com/api/v5/repos/${RELEASE_GITEE_OWNER}/${RELEASE_GITEE_REPO}"
           RID="${GITEE_RELEASE_ID}"
 
+          OVERALL_FAIL=0
           for f in dist/sop_generate-mac-${TAG}.7z.*; do
             NAME=$(basename "$f")
             SIZE_MB=$(du -m "$f" | cut -f1)
-            for i in 1 2 3; do
-              echo "上传 $NAME (${SIZE_MB} MB) 尝试 $i/3..."
+            SUCCESS=0
+            for i in 1 2 3 4 5; do
+              echo "上传 $NAME (${SIZE_MB} MB) 尝试 $i/5..."
+              # 用 || true 让 curl 失败（网络中断 exit 56 等）不退出脚本
               HTTP=$(curl -s -o /tmp/upload_resp.json -w "%{http_code}" \
-                --max-time 3600 \
+                --max-time 3600 --connect-timeout 60 \
                 -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
-                -F "file=@${f}")
+                -F "file=@${f}" || echo "000")
+              CURL_RC=$?
               if [ "$HTTP" = "201" ] || [ "$HTTP" = "200" ]; then
                 echo "  ✓ $NAME"
+                SUCCESS=1
                 break
               fi
-              echo "::warning::HTTP $HTTP, response: $(cat /tmp/upload_resp.json | head -c 200)"
-              if [ $i -eq 3 ]; then echo "::error::$NAME 上传失败"; exit 1; fi
-              sleep 10
+              echo "::warning::尝试 $i 失败 (curl rc=$CURL_RC HTTP=$HTTP): $(cat /tmp/upload_resp.json 2>/dev/null | head -c 200)"
+              sleep 15
             done
+            if [ "$SUCCESS" = "0" ]; then
+              echo "::error::$NAME 经 5 次重试仍上传失败"
+              OVERALL_FAIL=1
+            fi
           done
+          if [ "$OVERALL_FAIL" = "1" ]; then exit 1; fi
           echo "✓ macOS 分卷已挂载到 Gitee Release"
 
       - name: 追加 macOS 分卷到 GitHub Release（仅 tag）
