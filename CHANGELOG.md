@@ -4,6 +4,16 @@
 
 ---
 
+## v1.0.6 — 2026-05-29
+
+- 自动更新端到端验证版本：从 v1.0.5 自动升级到 v1.0.6 应当一气呵成
+  - updater self-relocation 到临时目录
+  - 替换 sop_generate.exe / updater.exe / _internal/
+  - 保留 products / assets / output 用户数据
+  - 自动启动新版本主程序
+
+---
+
 ## v1.0.5 — 2026-05-29
 
 **修复关键 Bug**：Windows 自动更新失败 `PermissionError: [WinError 5] 拒绝访问: updater.exe`
