@@ -330,13 +330,15 @@ jobs:
             for i in 1 2 3 4 5; do
               echo "上传 ${name} (${size_mb} MB) 尝试 ${i}/5..."
               http=$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
-                --max-time 900 --connect-timeout 30 \
+                --max-time 420 --connect-timeout 30 \
                 --speed-time 120 --speed-limit 1024 \
                 -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
                 -F "file=@${f}")
               curl_rc=$?
               if [ "$curl_rc" = "0" ] && { [ "$http" = "201" ] || [ "$http" = "200" ]; }; then
                 echo "  ✓ ${name}"
+                echo "  等待 60 秒，避免 Gitee 附件接口连续上传卡住..."
+                sleep 60
                 return 0
               fi
               echo "::warning::${name} 尝试 ${i} 失败 (curl rc=${curl_rc} HTTP=${http}): $(cat /tmp/upload_resp.json 2>/dev/null | head -c 200)"
