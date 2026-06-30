@@ -8,7 +8,7 @@
     2. 调 Gitee API 拿目标 release info
     3. 下载所有 .7z 分卷到临时目录
     4. 合并分卷 + py7zr 解压
-    5. 覆盖 app-dir 内除 products/ assets/ output/ 外的所有文件
+    5. 覆盖 app-dir 内除 sop_packages/ config/ output/ _legacy_v1_backup/ 外的所有文件
     6. 启动新版本主程序
     7. 自身退出
 """

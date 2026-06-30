@@ -4,7 +4,7 @@
 1. check_latest()  调 Gitee API 查最新 release
 2. is_newer()       版本号比较
 3. download_release() 下载所有 .7z.NNN 分卷（带进度回调）
-4. apply_update()    合并分卷 → py7zr 解压 → 覆盖文件（跳过 products/assets/output）
+4. apply_update()    合并分卷 → py7zr 解压 → 覆盖文件（保留用户数据目录）
 5. relaunch()        启动新版本可执行文件
 """
 from __future__ import annotations
@@ -54,7 +54,7 @@ def is_release_configured() -> bool:
     return cfg["gitee_owner"] not in ("your-org", "")
 
 # 升级时保留的用户数据目录（相对于 app_dir）
-PRESERVE_PATHS = {"products", "assets", "output"}
+PRESERVE_PATHS = {"sop_packages", "config", "output", "_legacy_v1_backup"}
 
 ProgressCb = Callable[[str, int, int], None]   # (stage, current_bytes, total_bytes)
 

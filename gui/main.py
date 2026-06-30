@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         self.resize(1500, 900)
 
         self.current: Product | None = None
+        self._reloading_proc_list = False
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
         self._preview_timer.timeout.connect(self._refresh_preview)
@@ -131,8 +132,9 @@ class MainWindow(QMainWindow):
 
         btn_row = QHBoxLayout()
         b_add = QPushButton("＋ 工序"); b_add.clicked.connect(self.action_add_proc)
+        b_insert = QPushButton("插入工序"); b_insert.clicked.connect(self.action_insert_proc)
         b_del = QPushButton("－ 工序"); b_del.clicked.connect(self.action_del_proc)
-        btn_row.addWidget(b_add); btn_row.addWidget(b_del)
+        btn_row.addWidget(b_add); btn_row.addWidget(b_insert); btn_row.addWidget(b_del)
         left_v.addLayout(btn_row)
         splitter.addWidget(left)
 
@@ -190,60 +192,92 @@ class MainWindow(QMainWindow):
         self._schedule_preview()
         self.status.showMessage(f"已加载 SOP：{model}")
 
-    def _reload_proc_list(self) -> None:
-        self.proc_list.clear()
-        if not self.current:
-            return
-        for i, p in enumerate(self.current.processes, start=1):
-            star = " ★" if p.get("key") else ""
-            meta = p.get("_meta") or {}
-            modifier = meta.get("last_modified_by", "")
-            modifier_part = f"  · {modifier}" if modifier else ""
-            self.proc_list.addItem(f"{i}. {p.get('name', '<无名>')}{star}{modifier_part}")
+    def _proc_item_text(self, index: int, proc: dict) -> str:
+        star = " ★" if proc.get("key") else ""
+        meta = proc.get("_meta") or {}
+        modifier = meta.get("last_modified_by", "")
+        modifier_part = f"  · {modifier}" if modifier else ""
+        return f"{index}. {proc.get('name', '<无名>')}{star}{modifier_part}"
+
+    def _make_proc_item(self, index: int, proc: dict) -> QListWidgetItem:
+        item = QListWidgetItem(self._proc_item_text(index, proc))
+        item.setData(Qt.UserRole, id(proc))
+        return item
+
+    def _proc_from_item(self, item: QListWidgetItem | None) -> dict | None:
+        if item is None or not self.current:
+            return None
+        proc_id = item.data(Qt.UserRole)
+        for proc in self.current.processes:
+            if id(proc) == proc_id:
+                return proc
+        return None
+
+    def _reload_proc_list(self, select_proc: dict | None = None) -> None:
+        self._reloading_proc_list = True
+        self.proc_list.blockSignals(True)
+        try:
+            self.proc_list.clear()
+            if not self.current:
+                return
+            target_row = -1
+            for i, p in enumerate(self.current.processes, start=1):
+                self.proc_list.addItem(self._make_proc_item(i, p))
+                if p is select_proc:
+                    target_row = i - 1
+        finally:
+            self.proc_list.blockSignals(False)
+            self._reloading_proc_list = False
+
         if self.proc_list.count():
-            self.proc_list.setCurrentRow(0)
+            self.proc_list.setCurrentRow(target_row if target_row >= 0 else 0)
 
     def _on_proc_selected(self, row: int) -> None:
-        if not self.current or row < 0 or row >= len(self.current.processes):
+        if self._reloading_proc_list or not self.current or row < 0:
             return
-        self.proc_editor.load(self.current.processes[row])
+        item = self.proc_list.item(row)
+        if item is None:
+            return
+        proc = self._proc_from_item(item)
+        if proc is None:
+            return
+        self.proc_editor.load(proc)
         self.tabs.setCurrentWidget(self.proc_editor)
 
     def _on_proc_edited(self) -> None:
         # 名称变化时同步左侧列表显示
         row = self.proc_list.currentRow()
         if self.current and 0 <= row < len(self.current.processes):
-            p = self.current.processes[row]
-            star = " ★" if p.get("key") else ""
-            self.proc_list.item(row).setText(f"{row + 1}. {p.get('name', '<无名>')}{star}")
+            item = self.proc_list.item(row)
+            if item is not None:
+                proc = self._proc_from_item(item)
+                if proc is not None:
+                    item.setText(self._proc_item_text(row + 1, proc))
         self._schedule_preview()
 
     def _on_proc_reordered(self, *args) -> None:
-        if not self.current:
+        if self._reloading_proc_list or not self.current:
             return
-        new_order: list[dict] = []
+        self.proc_editor.commit()
+        selected = self.proc_list.currentItem()
+        selected_proc = self._proc_from_item(selected)
+
+        rebuilt: list[dict] = []
+        seen: set[int] = set()
         for i in range(self.proc_list.count()):
-            text = self.proc_list.item(i).text()
-            # 通过文本反查很脆弱，改用：拖动后重建顺序
-            new_order.append(text)
-        # 实际重排：用拖后列表当前顺序，按原 processes 名字匹配
-        old = self.current.processes
-        rebuilt = []
-        used = set()
-        for txt in new_order:
-            # 去掉前缀序号
-            name = txt.split(". ", 1)[-1].replace(" ★", "")
-            for j, p in enumerate(old):
-                if j in used:
-                    continue
-                if p.get("name") == name:
-                    rebuilt.append(p)
-                    used.add(j)
-                    break
-        if len(rebuilt) == len(old):
-            self.current.processes = rebuilt
-            self._reload_proc_list()
-            self._schedule_preview()
+            proc = self._proc_from_item(self.proc_list.item(i))
+            if proc is not None and id(proc) not in seen:
+                rebuilt.append(proc)
+                seen.add(id(proc))
+
+        if len(rebuilt) != len(self.current.processes):
+            self._reload_proc_list(select_proc=selected_proc)
+            return
+
+        self.current.processes = rebuilt
+        self._reload_proc_list(select_proc=selected_proc)
+        self._schedule_preview()
+        self.status.showMessage("工序顺序已调整，请保存")
 
     # ---------- 动作 ----------
     def _ask_user_name(self, force: bool = False) -> None:
@@ -285,10 +319,16 @@ class MainWindow(QMainWindow):
         if box.clickedButton() is yes_btn:
             try:
                 result = migrate_legacy_data()
+                lines = [
+                    f"已迁移 {len(result['migrated'])} 个产品到 sop_packages/",
+                ]
+                if result["skipped"]:
+                    lines.append(f"已跳过 {len(result['skipped'])} 个同名产品（新结构中已存在）")
+                if result["backup_dir"]:
+                    lines.extend(["", f"老数据备份在：{result['backup_dir']}"])
                 QMessageBox.information(
                     self, "迁移完成",
-                    f"已迁移 {len(result['migrated'])} 个产品到 sop_packages/\n\n"
-                    f"老数据备份在：{result['backup_dir']}"
+                    "\n".join(lines)
                 )
                 self._reload_product_list()
             except Exception as e:
@@ -620,10 +660,47 @@ class MainWindow(QMainWindow):
     def action_add_proc(self) -> None:
         if not self.current:
             return
-        self.current.processes.append(copy.deepcopy(DEFAULT_PROCESS))
-        self._reload_proc_list()
-        self.proc_list.setCurrentRow(len(self.current.processes) - 1)
+        self._insert_process_at(len(self.current.processes), "已追加新工序，请保存")
+
+    def action_insert_proc(self) -> None:
+        if not self.current:
+            return
+        if not self.current.processes:
+            self._insert_process_at(0, "已插入新工序，请保存")
+            return
+
+        row = self.proc_list.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "提示", "请先选中一个工序，再决定插入到它前面或后面。")
+            return
+
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle("插入工序")
+        box.setText(f"要把新工序插入到第 {row + 1} 道工序的哪个位置？")
+        before_btn = box.addButton("插入到前面", QMessageBox.ActionRole)
+        after_btn = box.addButton("插入到后面", QMessageBox.AcceptRole)
+        cancel_btn = box.addButton("取消", QMessageBox.RejectRole)
+        box.setDefaultButton(after_btn)
+        box.exec()
+
+        clicked = box.clickedButton()
+        if clicked is cancel_btn:
+            return
+        insert_at = row if clicked is before_btn else row + 1
+        self._insert_process_at(insert_at, "已插入新工序，请保存")
+
+    def _insert_process_at(self, index: int, status_text: str) -> None:
+        if not self.current:
+            return
+        self.proc_editor.commit()
+        proc = copy.deepcopy(DEFAULT_PROCESS)
+        index = max(0, min(index, len(self.current.processes)))
+        self.current.processes.insert(index, proc)
+        self._reload_proc_list(select_proc=proc)
+        self.tabs.setCurrentWidget(self.proc_editor)
         self._schedule_preview()
+        self.status.showMessage(status_text)
 
     def action_del_proc(self) -> None:
         if not self.current:

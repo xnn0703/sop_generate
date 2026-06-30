@@ -71,6 +71,13 @@ def _strip_meta_for_compare(d: dict) -> dict:
     return out
 
 
+def _process_identity(d: dict) -> str | None:
+    """用自动追溯里的 created_at 识别同一道工序，避免拖拽排序误判为内容修改。"""
+    meta = d.get("_meta") or {}
+    key = meta.get("created_at")
+    return str(key) if key else None
+
+
 @dataclass
 class Product:
     """一个 SOP 产品（对应 sop_packages/<model>/）"""
@@ -145,10 +152,16 @@ class Product:
 
         # ===== 比较各工序 =====
         snap_procs = self._snapshot.get("processes", [])
-        # 用 (index, name) 作为对应键不可靠（顺序可拖动）；
-        # 简单策略：按 index 对位比较，超过的算新增
+        snap_by_identity = {
+            ident: snap
+            for snap in snap_procs
+            if (ident := _process_identity(snap))
+        }
         for i, proc in enumerate(self.processes):
-            snap = snap_procs[i] if i < len(snap_procs) else None
+            ident = _process_identity(proc)
+            snap = snap_by_identity.get(ident) if ident else None
+            if snap is None and len(self.processes) == len(snap_procs) and i < len(snap_procs):
+                snap = snap_procs[i]
             if snap is None:
                 # 新增的工序
                 _ensure_meta(proc, current_user)

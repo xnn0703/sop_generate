@@ -550,9 +550,9 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
   <h2>5. 主界面介绍</h2>
 
   <img src="images/main-ui.png" alt="SOP Generate 主界面" class="screenshot">
-  <p class="screenshot-caption">SOP Generate 主界面（v1.1.0）</p>
+  <p class="screenshot-caption">SOP Generate 主界面（v1.1.1）</p>
 
-  <p>整体布局分三栏：左侧 <strong>产品 + 工序列表</strong>（每个工序右侧显示 · 最后修改人），中间 <strong>编辑区</strong>（产品信息 / 工序编辑两个标签页，底部显示当前工序的创建/修改追溯信息），右侧 <strong>HTML 实时预览</strong>。顶部是工具栏，标题栏显示当前用户名。</p>
+  <p>整体布局分三栏：左侧 <strong>产品 + 工序列表</strong>（每个工序右侧显示 · 最后修改人，底部可追加/插入/删除工序），中间 <strong>编辑区</strong>（产品信息 / 工序编辑两个标签页，底部显示当前工序的创建/修改追溯信息），右侧 <strong>HTML 实时预览</strong>。顶部是工具栏，标题栏显示当前用户名。</p>
 
 
   <h3>5.1 工具栏按钮</h3>
@@ -656,7 +656,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
 <section id="process">
   <h2>7. 工序编辑</h2>
 
-  <h3>7.1 添加工序</h3>
+  <h3>7.1 追加工序</h3>
   <ol class="steps">
     <li>左侧选中 SOP</li>
     <li>左下角点 <strong>＋ 工序</strong> 按钮</li>
@@ -664,21 +664,30 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <li>切到 <strong>"工序编辑"</strong> 标签页填字段</li>
   </ol>
 
-  <h3>7.2 删除工序</h3>
+  <h3>7.2 插入工序</h3>
+  <ol class="steps">
+    <li>左侧先选中一个已有工序</li>
+    <li>点 <strong>插入工序</strong></li>
+    <li>弹窗选择 <strong>插入到前面</strong> 或 <strong>插入到后面</strong>（默认后面）</li>
+    <li>新工序插入后，后续编号自动重排，右侧预览同步刷新</li>
+    <li>填好字段后点 <span class="tb-btn">保存</span></li>
+  </ol>
+
+  <h3>7.3 删除工序</h3>
   <ol class="steps">
     <li>左侧选中要删除的工序</li>
     <li>点 <strong>－ 工序</strong></li>
     <li>立即生效，不二次确认。误删后<strong>必须重新填一遍</strong>，建议删除前用 <span class="tb-btn">保存</span> 备份</li>
   </ol>
 
-  <h3>7.3 调整工序顺序（拖拽）</h3>
+  <h3>7.4 调整工序顺序（拖拽）</h3>
   <ol class="steps">
     <li>左侧工序列表里<strong>按住鼠标左键拖动</strong></li>
-    <li>松开后顺序立即生效，封面、目录、流程图全部自动重排</li>
+    <li>松开后顺序立即生效，工序编号、流程图、工序详情页全部自动重排</li>
     <li>记得点 <span class="tb-btn">保存</span></li>
   </ol>
 
-  <h3>7.4 标记关键工序 ★</h3>
+  <h3>7.5 标记关键工序 ★</h3>
   <p>涉及静电敏感器件、精密装配等的工序应标记。</p>
 
   <ol class="steps">
@@ -969,7 +978,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <li>软件每次启动后约 1-2 秒，后台检查发版仓库是否有新版本</li>
     <li>有新版 → 弹窗 <strong>"立即更新 / 暂不更新 / 跳过此版本"</strong></li>
     <li>选立即更新 → updater 子程序接管，主程序退出</li>
-    <li>updater 自动：下载分卷 → 大小校验 → 解压 → 替换文件（<strong>保留 sop_packages 用户数据</strong>） → 启动新版本</li>
+    <li>updater 自动：下载分卷 → 大小校验 → 解压 → 替换文件（<strong>保留 sop_packages / config 等用户数据</strong>） → 启动新版本</li>
   </ol>
 
   <h3>15.2 升级时自动保留的数据</h3>
@@ -1017,7 +1026,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <li>左侧产品列表显示迁移后的所有 SOP</li>
   </ol>
 
-  <div class="info">老数据备份在 <code>_legacy_v1_backup/</code> 保留 <strong>1 个月</strong>。一个月后软件会自动清理，可以提前确认无误后手动删除整个目录释放空间。</div>
+  <div class="info">老数据备份在 <code>_legacy_v1_backup/</code> 保留 <strong>1 个月</strong>。如果旧 <code>products/</code> 里的型号已经全部存在于 <code>sop_packages/</code>，软件会跳过重复迁移，但仍会把旧目录移入备份，避免下次启动反复弹"检测到旧版本数据"。一个月后软件会自动清理，可以提前确认无误后手动删除整个目录释放空间。</div>
 
   <h3>16.2 全新装新版本</h3>
   <p>如果是从一台新电脑或者完全干净环境装新版本，可以用工具栏 <span class="tb-btn">导入旧数据</span> 选老版本根目录（含 <code>products/</code>），软件批量迁移过来。</p>
@@ -1057,7 +1066,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <li><strong>整个文件夹就是一个 SOP</strong>，复制粘贴就能传递（zip 不需要打开看）</li>
     <li><strong>图片和工序绑定</strong>，不会"YAML 改了图却忘了一起复制"</li>
     <li><strong>输出物归类</strong>：生成的 HTML/PDF 跟着源文件，不混在一起</li>
-    <li><strong>升级安全</strong>：自动更新只会替换软件本体，<code>sop_packages/</code> 永远保留</li>
+    <li><strong>升级安全</strong>：自动更新只会替换软件本体，<code>sop_packages/</code>、<code>config/</code> 等用户数据目录永远保留</li>
   </ul>
 </section>
 

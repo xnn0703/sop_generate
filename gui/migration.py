@@ -11,17 +11,26 @@
 from __future__ import annotations
 
 import shutil
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from core.paths import (
     LEGACY_BACKUP, LEGACY_IMAGES_DIR, LEGACY_PRODUCTS_DIR, SOP_PACKAGES_DIR,
-    app_dir, sop_package_dir,
+    sop_package_dir,
 )
 
 
 LEGACY_RETENTION_DAYS = 30
+
+
+def _next_backup_root() -> Path:
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_root = LEGACY_BACKUP / ts
+    counter = 1
+    while backup_root.exists():
+        counter += 1
+        backup_root = LEGACY_BACKUP / f"{ts}_{counter}"
+    return backup_root
 
 
 def migrate_legacy_data() -> dict:
@@ -61,10 +70,10 @@ def migrate_legacy_data() -> dict:
 
         migrated.append(model)
 
-    # 把老目录搬到 _legacy_v1_backup/<timestamp>/
-    if migrated:
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_root = LEGACY_BACKUP / ts
+    # 把老目录搬到 _legacy_v1_backup/<timestamp>/。
+    # 即使全部同名跳过，也要搬走旧目录，避免下次启动继续弹迁移提示。
+    if migrated or skipped:
+        backup_root = _next_backup_root()
         backup_root.mkdir(parents=True, exist_ok=True)
         if LEGACY_PRODUCTS_DIR.exists():
             shutil.move(str(LEGACY_PRODUCTS_DIR), str(backup_root / "products"))
