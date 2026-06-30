@@ -3,7 +3,7 @@
 # 四个 job：
 #   1. prepare-release（轻量 ubuntu）：tag 触发时创建 Gitee + GitHub Release，输出 release_id
 #   2. windows / macos（并行）：打包 → 7z 切片 → 上传分卷 Artifact
-#   3. publish-release（轻量 ubuntu）：串行上传所有分卷到 Gitee + GitHub Release
+#   3. publish-release（windows）：串行上传所有分卷到 Gitee + GitHub Release
 #
 # 必需的 GitHub Secrets：
 #   - GITEE_TOKEN
@@ -292,7 +292,7 @@ jobs:
   publish-release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [prepare-release, windows, macos]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
       RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
