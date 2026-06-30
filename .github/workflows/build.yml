@@ -1,8 +1,9 @@
 # sop_generate · 双平台并行打包（Windows + macOS）
 # ----------------------------------------------------------
-# 三个 job：
+# 四个 job：
 #   1. prepare-release（轻量 ubuntu）：tag 触发时创建 Gitee + GitHub Release，输出 release_id
-#   2. windows / macos（并行）：打包 → 7z 切片 → 上传分卷到已创建的 release
+#   2. windows / macos（并行）：打包 → 7z 切片 → 上传分卷 Artifact
+#   3. publish-release（轻量 ubuntu）：串行上传所有分卷到 Gitee + GitHub Release
 #
 # 必需的 GitHub Secrets：
 #   - GITEE_TOKEN
@@ -96,6 +97,7 @@ jobs:
       - name: 创建 GitHub Release（空，后续 upload 追加分卷）
         run: |
           TAG="${GITHUB_REF##*/}"
+          gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" --generate-notes --title "$TAG"
 
   # ===================================================================
@@ -182,42 +184,13 @@ jobs:
             Write-Host ("  {0}: {1:N1} MB" -f $_.Name, ($_.Length / 1MB))
           }
 
-      - name: 上传 Windows 分卷到 Gitee Release（仅 tag）
-        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
-        shell: pwsh
-        run: |
-          $api = "https://gitee.com/api/v5/repos/$env:RELEASE_GITEE_OWNER/$env:RELEASE_GITEE_REPO"
-          $rid = $env:GITEE_RELEASE_ID
-          $tok = $env:GITEE_TOKEN
-          $tag = '${{ github.ref_name }}'
-
-          $parts = Get-ChildItem "dist\sop_generate-win-$tag.7z.*" | Sort-Object Name
-          foreach ($p in $parts) {
-            $mb = [math]::Round($p.Length / 1MB, 1)
-            for ($i = 1; $i -le 3; $i++) {
-              Write-Host "上传 $($p.Name) ($mb MB) 尝试 $i/3..."
-              try {
-                $r = Invoke-RestMethod -Uri "$api/releases/$rid/attach_files?access_token=$tok" `
-                                       -Method Post -Form @{ file = $p } -TimeoutSec 3600
-                Write-Host "  ✓ $($r.name)"
-                break
-              } catch {
-                Write-Host "::warning::尝试 $i 失败：$_"
-                if ($i -eq 3) { throw }
-                Start-Sleep -Seconds 10
-              }
-            }
-          }
-          Write-Host "✓ Windows 分卷已挂载到 Gitee Release"
-
-      - name: 追加 Windows 分卷到 GitHub Release（仅 tag）
+      - name: 上传 Windows 发布分卷 Artifact（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          $tag = '${{ github.ref_name }}'
-          $parts = Get-ChildItem "dist\sop_generate-win-$tag.7z.*" | Sort-Object Name
-          gh release upload "$tag" ($parts.FullName) --clobber
-          Write-Host "✓ Windows 分卷已追加到 GitHub Release"
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-parts-win
+          path: dist/sop_generate-win-${{ github.ref_name }}.7z.*
+          retention-days: 7
 
   # ===================================================================
   # macOS 构建（并行）
@@ -305,56 +278,95 @@ jobs:
           7z a -t7z -mx=9 -mf=off -mmt=on -v30m "sop_generate-mac-${TAG}.7z" "sop_generate-mac-${TAG}/" > /dev/null
           ls -lh "sop_generate-mac-${TAG}.7z."*
 
-      - name: 上传 macOS 分卷到 Gitee Release（仅 tag）
-        if: startsWith(github.ref, 'refs/tags/v') && env.GITEE_TOKEN != ''
+      - name: 上传 macOS 发布分卷 Artifact（仅 tag）
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-parts-mac
+          path: dist/sop_generate-mac-${{ github.ref_name }}.7z.*
+          retention-days: 7
+
+  # ===================================================================
+  # 发布分卷（串行上传，避免 Gitee 并发附件上传卡住）
+  # ===================================================================
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare-release, windows, macos]
+    runs-on: ubuntu-latest
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
+      RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
+      GITEE_RELEASE_ID:    ${{ needs.prepare-release.outputs.gitee_release_id }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 下载发布分卷 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-parts-*
+          path: release-parts
+          merge-multiple: true
+
+      - name: 列出发布分卷
+        shell: bash
         run: |
-          # 不用 set -e，让 curl 失败时能进入重试循环（不直接退出脚本）
-          TAG="${GITHUB_REF##*/}"
+          find release-parts -type f -name '*.7z.*' -print | sort | xargs -r ls -lh
+
+      - name: 上传分卷到 Gitee Release（串行，仅 tag）
+        if: env.GITEE_TOKEN != ''
+        shell: bash
+        run: |
+          set -u
           API="https://gitee.com/api/v5/repos/${RELEASE_GITEE_OWNER}/${RELEASE_GITEE_REPO}"
           RID="${GITEE_RELEASE_ID}"
+          FAILED=0
 
-          OVERALL_FAIL=0
-          for f in dist/sop_generate-mac-${TAG}.7z.*; do
-            NAME=$(basename "$f")
-            SIZE_MB=$(du -m "$f" | cut -f1)
-            SUCCESS=0
+          upload_one() {
+            local f="$1"
+            local name size_mb http curl_rc
+            name=$(basename "$f")
+            size_mb=$(du -m "$f" | cut -f1)
             for i in 1 2 3 4 5; do
-              echo "上传 $NAME (${SIZE_MB} MB) 尝试 $i/5..."
-              # 用 || true 让 curl 失败（网络中断 exit 56 等）不退出脚本
-              HTTP=$(curl -s -o /tmp/upload_resp.json -w "%{http_code}" \
-                --max-time 3600 --connect-timeout 60 \
+              echo "上传 ${name} (${size_mb} MB) 尝试 ${i}/5..."
+              http=$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
+                --max-time 900 --connect-timeout 30 \
+                --speed-time 120 --speed-limit 1024 \
                 -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
-                -F "file=@${f}" || echo "000")
-              CURL_RC=$?
-              if [ "$HTTP" = "201" ] || [ "$HTTP" = "200" ]; then
-                echo "  ✓ $NAME"
-                SUCCESS=1
-                break
+                -F "file=@${f}")
+              curl_rc=$?
+              if [ "$curl_rc" = "0" ] && { [ "$http" = "201" ] || [ "$http" = "200" ]; }; then
+                echo "  ✓ ${name}"
+                return 0
               fi
-              echo "::warning::尝试 $i 失败 (curl rc=$CURL_RC HTTP=$HTTP): $(cat /tmp/upload_resp.json 2>/dev/null | head -c 200)"
-              sleep 15
+              echo "::warning::${name} 尝试 ${i} 失败 (curl rc=${curl_rc} HTTP=${http}): $(cat /tmp/upload_resp.json 2>/dev/null | head -c 200)"
+              sleep $((i * 15))
             done
-            if [ "$SUCCESS" = "0" ]; then
-              echo "::error::$NAME 经 5 次重试仍上传失败"
-              OVERALL_FAIL=1
-            fi
-          done
-          if [ "$OVERALL_FAIL" = "1" ]; then exit 1; fi
-          echo "✓ macOS 分卷已挂载到 Gitee Release"
+            echo "::error::${name} 经 5 次重试仍上传失败"
+            return 1
+          }
 
-      - name: 追加 macOS 分卷到 GitHub Release（仅 tag）
-        if: startsWith(github.ref, 'refs/tags/v')
+          while IFS= read -r f; do
+            upload_one "$f" || FAILED=1
+          done < <(find release-parts -type f -name '*.7z.*' | sort)
+
+          if [ "$FAILED" = "1" ]; then exit 1; fi
+          echo "✓ 全部分卷已挂载到 Gitee Release"
+
+      - name: 追加分卷到 GitHub Release（仅 tag）
+        shell: bash
         run: |
           TAG="${GITHUB_REF##*/}"
-          gh release upload "$TAG" dist/sop_generate-mac-${TAG}.7z.* --clobber
-          echo "✓ macOS 分卷已追加到 GitHub Release"
+          mapfile -t PARTS < <(find release-parts -type f -name '*.7z.*' | sort)
+          gh release upload "$TAG" "${PARTS[@]}" --clobber
+          echo "✓ 全部分卷已追加到 GitHub Release"
 
   # ===================================================================
   # 美化 Release 描述（双平台跑完后，按 OS 分组列出下载链接）
   # ===================================================================
   finalize-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [prepare-release, windows, macos]
+    needs: [prepare-release, publish-release]
     runs-on: ubuntu-latest
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
