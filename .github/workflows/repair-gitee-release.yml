@@ -1,0 +1,122 @@
+# 手动补传 Gitee Release 分卷
+#
+# 用途：当主发版流程中某个 .7z.NNN 分卷上传超时失败，而 GitHub Actions
+# artifact 里仍保留完整分卷时，单独补传缺失分卷，不重新打包、不重建 release。
+name: repair-gitee-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag，例如 v1.2.3"
+        required: true
+        default: "v1.2.3"
+      run_id:
+        description: "产生 release-parts-win artifact 的 GitHub Actions run id"
+        required: true
+        default: "28534685925"
+      part:
+        description: "要补传的分卷号，例如 001"
+        required: true
+        default: "001"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  upload-missing-part:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+      RUN_ID: ${{ inputs.run_id }}
+      PART: ${{ inputs.part }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
+      RELEASE_GITEE_REPO: ${{ secrets.RELEASE_GITEE_REPO }}
+
+    steps:
+      - name: 下载原始 Windows 分卷 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-parts-win
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release-parts
+
+      - name: 列出分卷
+        shell: bash
+        run: |
+          set -e
+          find release-parts -type f -name '*.7z.*' -print | sort | xargs -r ls -lh
+
+      - name: 补传指定分卷到 Gitee Release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GITEE_TOKEN}" ] || [ -z "${RELEASE_GITEE_OWNER}" ] || [ -z "${RELEASE_GITEE_REPO}" ]; then
+            echo "::error::缺少 GITEE_TOKEN / RELEASE_GITEE_OWNER / RELEASE_GITEE_REPO secret"
+            exit 1
+          fi
+
+          API="https://gitee.com/api/v5/repos/${RELEASE_GITEE_OWNER}/${RELEASE_GITEE_REPO}"
+          FILE="release-parts/sop_generate-win-${TAG}.7z.${PART}"
+          NAME="$(basename "$FILE")"
+          export NAME
+
+          if [ ! -f "$FILE" ]; then
+            echo "::error::找不到分卷：$FILE"
+            exit 1
+          fi
+
+          curl -sS "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}" > /tmp/release.json
+          RID="$(python3 - <<'PY'
+          import json
+          with open("/tmp/release.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          print(data.get("id") or "")
+          PY
+          )"
+
+          if [ -z "$RID" ]; then
+            echo "::error::找不到 Gitee Release：${TAG}"
+            head -c 500 /tmp/release.json || true
+            exit 1
+          fi
+
+          EXISTS="$(python3 - <<'PY'
+          import json, os
+          name = os.environ["NAME"]
+          with open("/tmp/release.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          print("yes" if any(a.get("name") == name for a in data.get("assets", [])) else "")
+          PY
+          )"
+
+          if [ "$EXISTS" = "yes" ]; then
+            echo "✓ ${NAME} 已存在，无需补传"
+            exit 0
+          fi
+
+          size_mb="$(du -m "$FILE" | cut -f1)"
+          for i in 1 2 3 4 5 6; do
+            echo "上传 ${NAME} (${size_mb} MB) 尝试 ${i}/6..."
+            set +e
+            http="$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
+              --max-time 900 --connect-timeout 45 \
+              --speed-time 240 --speed-limit 256 \
+              -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
+              -F "file=@${FILE}")"
+            rc="$?"
+            set -e
+            if [ "$rc" = "0" ] && { [ "$http" = "200" ] || [ "$http" = "201" ]; }; then
+              echo "✓ ${NAME} 补传完成"
+              exit 0
+            fi
+            echo "::warning::${NAME} 尝试 ${i} 失败 (curl rc=${rc} HTTP=${http}): $(head -c 300 /tmp/upload_resp.json 2>/dev/null || true)"
+            sleep $((i * 30))
+          done
+
+          echo "::error::${NAME} 经多次重试仍上传失败"
+          exit 1

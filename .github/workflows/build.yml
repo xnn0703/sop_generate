@@ -3,7 +3,7 @@
 # 四个 job：
 #   1. prepare-release（轻量 ubuntu）：tag 触发时创建 Gitee + GitHub Release，输出 release_id
 #   2. windows：打包 → 7z 切片 → 上传分卷 Artifact
-#   3. publish-release（windows）：串行上传 Windows 分卷到 Gitee + GitHub Release
+#   3. publish-release（ubuntu）：先追加 Windows 分卷到 GitHub Release，再串行上传到 Gitee
 #   4. finalize-release（轻量 ubuntu）：整理 Release 说明
 #
 # 必需的 GitHub Secrets：
@@ -171,14 +171,14 @@ jobs:
           path: dist/sop_generate-win/
           retention-days: 14
 
-      - name: 7z 极限压缩 + 30MB 切片（仅 tag）
+      - name: 7z 极限压缩 + 10MB 切片（仅 tag）
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'
           cd dist
           # -mf=off 禁用 BCJ2 等执行过滤器，确保客户端 py7zr 能解压
-          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mf=off -mmt=on -v30m "sop_generate-win-$tag.7z" sop_generate-win\ | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=9 -mf=off -mmt=on -v10m "sop_generate-win-$tag.7z" sop_generate-win\ | Out-Null
           Get-ChildItem "sop_generate-win-$tag.7z.*" | ForEach-Object {
             Write-Host ("  {0}: {1:N1} MB" -f $_.Name, ($_.Length / 1MB))
           }
@@ -197,7 +197,7 @@ jobs:
   publish-release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [prepare-release, windows]
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
       RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
@@ -218,6 +218,14 @@ jobs:
         run: |
           find release-parts -type f -name '*.7z.*' -print | sort | xargs -r ls -lh
 
+      - name: 追加分卷到 GitHub Release（仅 tag）
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          mapfile -t PARTS < <(find release-parts -type f -name '*.7z.*' | sort)
+          gh release upload "$TAG" "${PARTS[@]}" --clobber
+          echo "✓ 全部分卷已追加到 GitHub Release"
+
       - name: 上传分卷到 Gitee Release（串行，仅 tag）
         if: env.GITEE_TOKEN != ''
         shell: bash
@@ -235,8 +243,8 @@ jobs:
             for i in 1 2 3 4 5; do
               echo "上传 ${name} (${size_mb} MB) 尝试 ${i}/5..."
               http=$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
-                --max-time 420 --connect-timeout 30 \
-                --speed-time 120 --speed-limit 1024 \
+                --connect-timeout 60 --max-time 900 \
+                --retry 3 --retry-delay 10 --retry-connrefused \
                 -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
                 -F "file=@${f}")
               curl_rc=$?
@@ -246,7 +254,11 @@ jobs:
                 sleep 60
                 return 0
               fi
-              echo "::warning::${name} 尝试 ${i} 失败 (curl rc=${curl_rc} HTTP=${http}): $(cat /tmp/upload_resp.json 2>/dev/null | head -c 200)"
+              echo "::warning::${name} 尝试 ${i} 失败 (curl rc=${curl_rc} HTTP=${http})"
+              echo "  --- /tmp/upload_resp.json (head 1k) ---"
+              head -c 1024 /tmp/upload_resp.json || true
+              echo
+              echo "  --- end resp ---"
               sleep $((i * 15))
             done
             echo "::error::${name} 经 5 次重试仍上传失败"
@@ -259,14 +271,6 @@ jobs:
 
           if [ "$FAILED" = "1" ]; then exit 1; fi
           echo "✓ 全部分卷已挂载到 Gitee Release"
-
-      - name: 追加分卷到 GitHub Release（仅 tag）
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF##*/}"
-          mapfile -t PARTS < <(find release-parts -type f -name '*.7z.*' | sort)
-          gh release upload "$TAG" "${PARTS[@]}" --clobber
-          echo "✓ 全部分卷已追加到 GitHub Release"
 
   # ===================================================================
   # 美化 Release 描述（Windows 分卷上传后列出下载链接）
