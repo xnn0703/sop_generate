@@ -3,7 +3,7 @@
 v1.1.0 起：移除所有数量/字符长度硬限制。
 - 字段超出单页容量 → 自动分页（renderer 处理）
 - 单元格 overflow:hidden 兜底
-- 仅校验必填字段、格式、图片存在性
+- 仅校验基础必填字段、格式、图片存在性
 """
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .process_utils import image_file, process_has_own_content
 
 
 # =============== 单页容量（用于自动分页计算）===============
@@ -59,7 +61,7 @@ class ValidationResult:
 
 
 def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationResult:
-    """校验 YAML 字典。仅校验必填、格式、图片存在性；不再硬限数量。"""
+    """校验 YAML 字典。仅校验基础必填、格式、图片存在性；不再硬限数量。"""
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -113,14 +115,53 @@ def validate(data: dict[str, Any], yaml_path: Path | None = None) -> ValidationR
         if not proc.get("name"):
             errors.append(f"{prefix}.name 缺失")
         if not (proc.get("operations") or []):
-            errors.append(f"{prefix}.operations 不能为空")
+            warnings.append(f"{prefix}.operations 为空，将按草稿占位导出")
+        if not process_has_own_content(proc):
+            warnings.append(f"{prefix} 内容全部为空，将按草稿占位导出")
+
+        level = proc.get("level", 1)
+        try:
+            level_int = int(level)
+        except (TypeError, ValueError):
+            errors.append(f"{prefix}.level 应为 1、2、3，得到 {level!r}")
+        else:
+            if level_int not in (1, 2, 3):
+                errors.append(f"{prefix}.level 应为 1、2、3，得到 {level!r}")
+
+        work_time = proc.get("work_time_min")
+        if work_time not in (None, ""):
+            try:
+                work_time_int = int(work_time)
+            except (TypeError, ValueError):
+                errors.append(f"{prefix}.work_time_min 应为分钟数字，得到 {work_time!r}")
+            else:
+                if work_time_int < 0:
+                    errors.append(f"{prefix}.work_time_min 不能为负数，得到 {work_time!r}")
 
         images = proc.get("images") or []
         # 允许工序没有图片（v1.1.0 起去除"至少 1 张"的硬性要求）
+        if not isinstance(images, list):
+            errors.append(f"{prefix}.images 应为列表")
+            images = []
+        for img in images:
+            fname = image_file(img)
+            if isinstance(img, dict) and isinstance(img.get("layout"), dict):
+                rotation = img["layout"].get("rotation", 0)
+                try:
+                    rotation_int = int(rotation)
+                except (TypeError, ValueError):
+                    errors.append(f"{prefix}.images.{fname or '<空>'}.layout.rotation 应为 0/90/180/270，得到 {rotation!r}")
+                else:
+                    if rotation_int % 360 not in (0, 90, 180, 270):
+                        errors.append(f"{prefix}.images.{fname or '<空>'}.layout.rotation 应为 0/90/180/270，得到 {rotation!r}")
         if img_root is not None:
             for img in images:
-                if not (img_root / img).exists():
-                    errors.append(f"{prefix} 图片不存在：{img_root / img}")
+                fname = image_file(img)
+                if not fname:
+                    errors.append(f"{prefix} 图片条目缺少 file：{img!r}")
+                    continue
+                if not (img_root / fname).exists():
+                    errors.append(f"{prefix} 图片不存在：{img_root / fname}")
 
         # 容量超出提示（不是错误，渲染时会自动分页）
         for fname, limit, name in [

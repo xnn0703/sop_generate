@@ -1,9 +1,10 @@
-# sop_generate · 双平台并行打包（Windows + macOS）
+# sop_generate · Windows 打包发布
 # ----------------------------------------------------------
 # 四个 job：
 #   1. prepare-release（轻量 ubuntu）：tag 触发时创建 Gitee + GitHub Release，输出 release_id
-#   2. windows / macos（并行）：打包 → 7z 切片 → 上传分卷 Artifact
-#   3. publish-release（windows）：串行上传所有分卷到 Gitee + GitHub Release
+#   2. windows：打包 → 7z 切片 → 上传分卷 Artifact
+#   3. publish-release（windows）：串行上传 Windows 分卷到 Gitee + GitHub Release
+#   4. finalize-release（轻量 ubuntu）：整理 Release 说明
 #
 # 必需的 GitHub Secrets：
 #   - GITEE_TOKEN
@@ -66,11 +67,9 @@ jobs:
           稳定版本 **${TAG}** (commit ${SHA})。
 
           **Windows 下载**：把 sop_generate-win-${TAG}.7z.001 / .002 ... 全部下载到同一文件夹，用 7-Zip 解压 .001。
-          **macOS 下载**：把 sop_generate-mac-${TAG}.7z.001 / .002 ... 全部下载到同一文件夹，用 Keka / 7-Zip 解压 .001。
 
           **首次启动**：
           - Windows: Defender 提示时点 "更多信息 → 仍要运行"
-          - macOS: 系统设置 → 隐私与安全性 → 放行 sop_generate.app
           EOF
           )
           PAYLOAD=$(python3 -c "
@@ -193,105 +192,11 @@ jobs:
           retention-days: 7
 
   # ===================================================================
-  # macOS 构建（并行）
-  # ===================================================================
-  macos:
-    runs-on: macos-latest
-    needs: [prepare-release]
-    if: ${{ !cancelled() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped') }}
-    env:
-      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-      RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
-      RELEASE_GITEE_REPO:  ${{ secrets.RELEASE_GITEE_REPO }}
-      GITEE_RELEASE_ID: ${{ needs.prepare-release.outputs.gitee_release_id }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    steps:
-      - name: 拉取代码
-        uses: actions/checkout@v4
-
-      - name: 安装 Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: 安装系统依赖（p7zip）
-        run: brew install p7zip
-
-      - name: 安装 Python 依赖
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r packaging/requirements-build.txt
-
-      - name: 注入 release.config.json
-        if: env.RELEASE_GITEE_OWNER != '' && env.RELEASE_GITEE_REPO != ''
-        run: |
-          cat > release.config.json <<EOF
-          {
-            "gitee_owner": "$RELEASE_GITEE_OWNER",
-            "gitee_repo": "$RELEASE_GITEE_REPO",
-            "gitee_api": "https://gitee.com/api/v5"
-          }
-          EOF
-
-      - name: PyInstaller 打包
-        run: pyinstaller packaging/build.spec --clean --noconfirm
-
-      - name: 整理发布目录
-        run: |
-          TAG="${GITHUB_REF##*/}"
-          RELEASE="dist/sop_generate-mac-${TAG}"
-          mkdir -p "$RELEASE/sop_packages" "$RELEASE/output"
-          mv dist/sop_generate.app "$RELEASE/"
-          cp -r sop_packages/* "$RELEASE/sop_packages/" 2>/dev/null || true
-          cat > "$RELEASE/使用说明.txt" <<'TXT'
-          sop_generate · 作业指导书生成器
-          ================================
-
-          【启动】双击 sop_generate.app
-          【首次运行】macOS 会问"无法验证开发者"，请：
-              系统设置 → 隐私与安全性 → 放行 sop_generate.app
-          【数据目录】products / assets/images / output 都在 .app 同级
-          【导出 PDF】需装 Microsoft Edge 或 Google Chrome
-          【自动更新】启动后台会检查更新，有新版弹窗提示
-
-          【详细操作说明】用浏览器打开 使用说明.html
-          TXT
-          cp docs/使用说明.html "$RELEASE/使用说明.html"
-          [ -d docs/images ] && cp -r docs/images "$RELEASE/images" || true
-
-      - name: 上传 GitHub Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sop_generate-mac
-          path: dist/sop_generate-mac-*/
-          retention-days: 14
-
-      - name: 7z 极限压缩 + 30MB 切片（仅 tag）
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          TAG="${GITHUB_REF##*/}"
-          cd dist
-          # -mf=off 禁用 BCJ2 等执行过滤器，确保客户端 py7zr 能解压
-          7z a -t7z -mx=9 -mf=off -mmt=on -v30m "sop_generate-mac-${TAG}.7z" "sop_generate-mac-${TAG}/" > /dev/null
-          ls -lh "sop_generate-mac-${TAG}.7z."*
-
-      - name: 上传 macOS 发布分卷 Artifact（仅 tag）
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-parts-mac
-          path: dist/sop_generate-mac-${{ github.ref_name }}.7z.*
-          retention-days: 7
-
-  # ===================================================================
   # 发布分卷（串行上传，避免 Gitee 并发附件上传卡住）
   # ===================================================================
   publish-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [prepare-release, windows, macos]
+    needs: [prepare-release, windows]
     runs-on: windows-latest
     env:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
@@ -304,7 +209,7 @@ jobs:
       - name: 下载发布分卷 Artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: release-parts-*
+          pattern: release-parts-win
           path: release-parts
           merge-multiple: true
 
@@ -364,7 +269,7 @@ jobs:
           echo "✓ 全部分卷已追加到 GitHub Release"
 
   # ===================================================================
-  # 美化 Release 描述（双平台跑完后，按 OS 分组列出下载链接）
+  # 美化 Release 描述（Windows 分卷上传后列出下载链接）
   # ===================================================================
   finalize-release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -444,16 +349,15 @@ jobs:
               mb = size / 1024 / 1024
               return f"- [{name}]({url}) — {mb:.1f} MB"
 
-          win  = sorted([a for a in assets if "sop_generate-win" in a.get("name","")], key=lambda x:x["name"])
-          mac  = sorted([a for a in assets if "sop_generate-mac" in a.get("name","")], key=lambda x:x["name"])
+          win = sorted([a for a in assets if "sop_generate-win" in a.get("name","")], key=lambda x:x["name"])
 
           print(f"# sop_generate {TAG}")
           print()
-          print(f"> 自动构建。客户端启动会自动检查更新，首次安装请按下方分类选择对应平台的分卷。")
+          print(f"> 自动构建。客户端启动会自动检查更新。本次 Release 仅提供 Windows 版本。")
           print()
 
           if win:
-              print("## 🪟 Windows 下载")
+              print("## Windows 下载")
               print()
               print(f"**共 {len(win)} 个分卷**（必须全部下载到同一文件夹）：")
               print()
@@ -467,24 +371,9 @@ jobs:
               print("5. 首次运行 Defender 提示 → \"更多信息 → 仍要运行\"")
               print()
 
-          if mac:
-              print("## 🍎 macOS 下载")
-              print()
-              print(f"**共 {len(mac)} 个分卷**（必须全部下载到同一文件夹）：")
-              print()
-              for a in mac: print(fmt(a))
-              print()
-              print("**安装步骤：**")
-              print("1. 把上方所有 .7z.NNN 分卷下载到同一文件夹")
-              print("2. 安装 [Keka](https://www.keka.io/) 或 `brew install p7zip`")
-              print("3. 双击 `.7z.001` 解压（Keka）或终端 `7z x sop_generate-mac-*.7z.001`")
-              print("4. 进入解压后目录，双击 `sop_generate.app`")
-              print("5. 首次运行：系统设置 → 隐私与安全性 → 放行 sop_generate.app")
-              print()
-
           print("---")
           print()
-          print("> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Win10/11 自带 Edge）。")
+          print("> 导出 PDF 需本机已装 Microsoft Edge 或 Google Chrome（Windows 10/11 通常自带 Edge）。")
           print("> 启动后会在后台自动检查更新，有新版会弹窗提示。")
           PY
           BODY=$(cat /tmp/body.md)

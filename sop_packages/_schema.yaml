@@ -8,8 +8,8 @@
 #   ├── images/
 #   └── output/
 
-# -------- 字段规范（v1.1.0 起无数量硬限制，超出自动分页） --------
-# product.model:            必填，仅字母数字/下划线/横线
+# -------- 字段规范（v1.2.0 起支持多级工序、图片手动布局、草稿导出） --------
+# product.model:            必填，仅禁文件系统不允许字符
 # product.name:             必填
 # product.company:          必填
 # product.doc_id:           必填
@@ -18,12 +18,15 @@
 # product.effective_date:   必填，YYYY-M-D
 # product._meta:            自动维护（created_by/at, last_modified_by/at）
 #
-# processes:                必填，1+ 项；流程图每 8 个工序自动分页
+# processes:                必填，1+ 项；流程图按一级工序组自动分页
 #   - name:                 必填
+#     level:                可选，1/2/3；旧工程缺省为 1
 #     key:                  布尔，true 标记关键工序（★）
-#     operations:           必填，单页 6 条；超出自动分页
+#     work_time_min:        可选，分钟数字；导出显示为 45min / 1h / 1h15min
+#     operations:           可空，单页 6 条；超出自动分页
 #     notes:                可选，单页 4 条；超出自动分页
-#     images:               必填，单页 4 张（1 全占 / 2 上下 / 3-4 2×2）；超出自动分页
+#     images:               可选，单页 4 张；旧写法为文件名，新写法可带 layout
+#       layout:             手动图片布局，百分比坐标；rotation 可选 0/90/180/270
 #     tools:                可选，单页 4 项；超出自动分页
 #     materials:            可选，单页 4 项；超出自动分页
 #     _meta:                自动维护
@@ -40,8 +43,10 @@ example:
     effective_date: 2026-1-15
 
   processes:
-    - name: 示例工序
+    - name: 示例一级工序
+      level: 1
       key: true
+      work_time_min: 75
       operations:
         - 第一步：取一个零件
         - 第二步：装到对应位置
@@ -49,7 +54,18 @@ example:
         - 注意佩戴防静电手环
       images:
         - 示例工序.png
+        - file: 示例工序局部.png
+          layout: {x: 52, y: 0, w: 48, h: 48, rotation: 90}
       tools:
         - 螺丝刀
       materials:
         - M3×6 螺钉
+    - name: 示例二级工序
+      level: 2
+      key: false
+      work_time_min: 30
+      operations: []
+      notes: []
+      images: []
+      tools: []
+      materials: []

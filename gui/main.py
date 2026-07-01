@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -28,10 +29,14 @@ from core.validator import validate
 from core.pdf_export import export_pdf, find_browser
 from core.updater import check_latest, is_newer, is_release_configured
 from core.user_config import get_current_user, set_current_user, is_user_set
+from core.process_utils import (
+    annotate_processes, descendant_end, get_process_level, normalize_process_sequence,
+)
 
 paths.ensure_user_dirs()
 
 from gui.editor import ProcessEditor, ProductMetaEditor
+from gui.widgets import ProcessListWidget
 from gui.model import (
     DEFAULT_PROCESS, Product, clone_product, delete_product, import_legacy,
     list_products, new_product,
@@ -68,6 +73,7 @@ class MainWindow(QMainWindow):
         self._preview_timer.setSingleShot(True)
         self._preview_timer.timeout.connect(self._refresh_preview)
         self._preview_html_path = Path(tempfile.gettempdir()) / "sop_preview.html"
+        self._pending_preview_anchor: str | None = None
 
         self._build_toolbar()
         self._build_central()
@@ -124,18 +130,26 @@ class MainWindow(QMainWindow):
         left_v.addWidget(self.product_list, 1)
 
         left_v.addWidget(QLabel("工序"))
-        self.proc_list = QListWidget()
-        self.proc_list.setDragDropMode(QListWidget.InternalMove)
-        self.proc_list.model().rowsMoved.connect(self._on_proc_reordered)
+        self.proc_list = ProcessListWidget()
+        self.proc_list.blockDropped.connect(self._on_proc_block_dropped)
         self.proc_list.currentRowChanged.connect(self._on_proc_selected)
         left_v.addWidget(self.proc_list, 2)
 
         btn_row = QHBoxLayout()
-        b_add = QPushButton("＋ 工序"); b_add.clicked.connect(self.action_add_proc)
-        b_insert = QPushButton("插入工序"); b_insert.clicked.connect(self.action_insert_proc)
+        b_add = QPushButton("＋ 同级"); b_add.clicked.connect(self.action_add_proc)
+        b_child = QPushButton("＋ 子级"); b_child.clicked.connect(self.action_add_child_proc)
+        b_insert = QPushButton("插入"); b_insert.clicked.connect(self.action_insert_proc)
         b_del = QPushButton("－ 工序"); b_del.clicked.connect(self.action_del_proc)
-        btn_row.addWidget(b_add); btn_row.addWidget(b_insert); btn_row.addWidget(b_del)
+        btn_row.addWidget(b_add); btn_row.addWidget(b_child); btn_row.addWidget(b_insert); btn_row.addWidget(b_del)
         left_v.addLayout(btn_row)
+
+        move_row = QHBoxLayout()
+        b_up = QPushButton("↑ 上移"); b_up.clicked.connect(self.action_move_proc_up)
+        b_down = QPushButton("↓ 下移"); b_down.clicked.connect(self.action_move_proc_down)
+        b_promote = QPushButton("← 升级"); b_promote.clicked.connect(self.action_promote_proc)
+        b_demote = QPushButton("→ 降级"); b_demote.clicked.connect(self.action_demote_proc)
+        move_row.addWidget(b_up); move_row.addWidget(b_down); move_row.addWidget(b_promote); move_row.addWidget(b_demote)
+        left_v.addLayout(move_row)
         splitter.addWidget(left)
 
         # ----- 中：编辑器（标签页：产品元信息 / 工序） -----
@@ -155,6 +169,7 @@ class MainWindow(QMainWindow):
         right = QWidget(); rv = QVBoxLayout(right); rv.setContentsMargins(0, 0, 0, 0)
         rv.addWidget(QLabel("HTML 预览  (编辑后约 0.6s 自动刷新)"))
         self.preview = QWebEngineView()
+        self.preview.loadFinished.connect(self._on_preview_load_finished)
         rv.addWidget(self.preview, 1)
         splitter.addWidget(right)
 
@@ -192,15 +207,20 @@ class MainWindow(QMainWindow):
         self._schedule_preview()
         self.status.showMessage(f"已加载 SOP：{model}")
 
-    def _proc_item_text(self, index: int, proc: dict) -> str:
+    def _proc_item_text(self, proc: dict, display: dict | None = None) -> str:
+        display = display or proc
         star = " ★" if proc.get("key") else ""
         meta = proc.get("_meta") or {}
         modifier = meta.get("last_modified_by", "")
         modifier_part = f"  · {modifier}" if modifier else ""
-        return f"{index}. {proc.get('name', '<无名>')}{star}{modifier_part}"
+        level = int(display.get("_level", proc.get("level", 1)) or 1)
+        indent = "    " * max(0, level - 1)
+        number = display.get("_proc_number", "?")
+        work_time = display.get("_work_time_text", "—")
+        return f"{indent}{number}. {proc.get('name', '<无名>')}{star}  [{work_time}]{modifier_part}"
 
-    def _make_proc_item(self, index: int, proc: dict) -> QListWidgetItem:
-        item = QListWidgetItem(self._proc_item_text(index, proc))
+    def _make_proc_item(self, proc: dict, display: dict | None = None) -> QListWidgetItem:
+        item = QListWidgetItem(self._proc_item_text(proc, display))
         item.setData(Qt.UserRole, id(proc))
         return item
 
@@ -213,6 +233,22 @@ class MainWindow(QMainWindow):
                 return proc
         return None
 
+    def _proc_row_by_id(self, proc_id: object) -> int:
+        if not self.current:
+            return -1
+        for row, proc in enumerate(self.current.processes):
+            if id(proc) == proc_id:
+                return row
+        return -1
+
+    def _proc_row_by_object(self, target: dict | None) -> int:
+        if not self.current or target is None:
+            return -1
+        for row, proc in enumerate(self.current.processes):
+            if proc is target:
+                return row
+        return -1
+
     def _reload_proc_list(self, select_proc: dict | None = None) -> None:
         self._reloading_proc_list = True
         self.proc_list.blockSignals(True)
@@ -221,10 +257,12 @@ class MainWindow(QMainWindow):
             if not self.current:
                 return
             target_row = -1
-            for i, p in enumerate(self.current.processes, start=1):
-                self.proc_list.addItem(self._make_proc_item(i, p))
+            normalize_process_sequence(self.current.processes)
+            displays = annotate_processes(self.current.processes)
+            for i, p in enumerate(self.current.processes):
+                self.proc_list.addItem(self._make_proc_item(p, displays[i]))
                 if p is select_proc:
-                    target_row = i - 1
+                    target_row = i
         finally:
             self.proc_list.blockSignals(False)
             self._reloading_proc_list = False
@@ -243,6 +281,7 @@ class MainWindow(QMainWindow):
             return
         self.proc_editor.load(proc)
         self.tabs.setCurrentWidget(self.proc_editor)
+        self._scroll_preview_to_current_proc()
 
     def _on_proc_edited(self) -> None:
         # 名称变化时同步左侧列表显示
@@ -252,32 +291,90 @@ class MainWindow(QMainWindow):
             if item is not None:
                 proc = self._proc_from_item(item)
                 if proc is not None:
-                    item.setText(self._proc_item_text(row + 1, proc))
+                    displays = annotate_processes(self.current.processes)
+                    proc_row = self._proc_row_by_object(proc)
+                    if proc_row >= 0:
+                        item.setText(self._proc_item_text(proc, displays[proc_row]))
         self._schedule_preview()
 
-    def _on_proc_reordered(self, *args) -> None:
+    def _on_proc_block_dropped(self, source_proc_id: object, target_row: int) -> None:
         if self._reloading_proc_list or not self.current:
             return
-        self.proc_editor.commit()
-        selected = self.proc_list.currentItem()
-        selected_proc = self._proc_from_item(selected)
-
-        rebuilt: list[dict] = []
-        seen: set[int] = set()
-        for i in range(self.proc_list.count()):
-            proc = self._proc_from_item(self.proc_list.item(i))
-            if proc is not None and id(proc) not in seen:
-                rebuilt.append(proc)
-                seen.add(id(proc))
-
-        if len(rebuilt) != len(self.current.processes):
-            self._reload_proc_list(select_proc=selected_proc)
+        source_row = self._proc_row_by_id(source_proc_id)
+        if source_row < 0:
+            self._reload_proc_list()
             return
+        self._move_process_block(source_row, target_row)
 
-        self.current.processes = rebuilt
+    def _move_process_block(self, source_row: int, target_row: int) -> None:
+        if not self.current or source_row < 0 or source_row >= len(self.current.processes):
+            return
+        self.proc_editor.commit()
+        end = descendant_end(self.current.processes, source_row)
+        if source_row <= target_row <= end:
+            self._reload_proc_list(select_proc=self.current.processes[source_row])
+            return
+        block = self.current.processes[source_row:end]
+        selected_proc = block[0]
+        del self.current.processes[source_row:end]
+        if target_row > source_row:
+            target_row -= len(block)
+        target_row = max(0, min(target_row, len(self.current.processes)))
+        self.current.processes[target_row:target_row] = block
+        normalize_process_sequence(self.current.processes)
         self._reload_proc_list(select_proc=selected_proc)
         self._schedule_preview()
         self.status.showMessage("工序顺序已调整，请保存")
+
+    def _current_proc_anchor(self) -> str | None:
+        if not self.current:
+            return None
+        proc = self._proc_from_item(self.proc_list.currentItem())
+        row = self._proc_row_by_object(proc)
+        if row < 0:
+            return None
+        displays = annotate_processes(self.current.processes)
+        if row >= len(displays):
+            return None
+        return f"proc-{displays[row]['_proc_number']}-1"
+
+    def _run_preview_scroll(self, anchor: str | None) -> None:
+        if not anchor:
+            return
+        script = f"""
+(() => {{
+  const anchor = {json.dumps(anchor)};
+  const jump = () => {{
+    const el = document.getElementById(anchor);
+    if (!el) return false;
+    const y = el.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, Math.max(0, y));
+    return true;
+  }};
+  jump();
+  setTimeout(jump, 50);
+  setTimeout(jump, 200);
+}})();
+"""
+        self.preview.page().runJavaScript(script)
+
+    def _scroll_preview_to_anchor(self, anchor: str | None) -> None:
+        if not anchor:
+            return
+        self._pending_preview_anchor = anchor
+        self._run_preview_scroll(anchor)
+        QTimer.singleShot(80, lambda a=anchor: self._run_preview_scroll(a))
+        QTimer.singleShot(240, lambda a=anchor: self._run_preview_scroll(a))
+
+    def _scroll_preview_to_current_proc(self) -> None:
+        self._scroll_preview_to_anchor(self._current_proc_anchor())
+
+    def _on_preview_load_finished(self, ok: bool) -> None:
+        if not ok:
+            return
+        anchor = self._pending_preview_anchor
+        self._pending_preview_anchor = None
+        self._run_preview_scroll(anchor)
 
     # ---------- 动作 ----------
     def _ask_user_name(self, force: bool = False) -> None:
@@ -439,7 +536,7 @@ class MainWindow(QMainWindow):
             return
 
         # 先校验
-        if not self._ensure_valid_for_export():
+        if not self._ensure_valid_for_export(for_archive=True):
             return
 
         # 先保存
@@ -660,7 +757,32 @@ class MainWindow(QMainWindow):
     def action_add_proc(self) -> None:
         if not self.current:
             return
-        self._insert_process_at(len(self.current.processes), "已追加新工序，请保存")
+        row = self.proc_list.currentRow()
+        if row >= 0 and row < len(self.current.processes):
+            level = get_process_level(self.current.processes[row])
+            index = descendant_end(self.current.processes, row)
+        else:
+            level = 1
+            index = len(self.current.processes)
+        self._insert_process_at(index, "已追加同级工序，请保存", level=level)
+
+    def action_add_child_proc(self) -> None:
+        if not self.current:
+            return
+        row = self.proc_list.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "提示", "请先选中一个父级工序。")
+            return
+        parent = self.current.processes[row]
+        level = get_process_level(parent)
+        if level >= 3:
+            QMessageBox.information(self, "无法添加", "当前已是三级工序，不能再添加子级。")
+            return
+        self._insert_process_at(
+            descendant_end(self.current.processes, row),
+            "已追加子级工序，请保存",
+            level=level + 1,
+        )
 
     def action_insert_proc(self) -> None:
         if not self.current:
@@ -687,16 +809,19 @@ class MainWindow(QMainWindow):
         clicked = box.clickedButton()
         if clicked is cancel_btn:
             return
-        insert_at = row if clicked is before_btn else row + 1
-        self._insert_process_at(insert_at, "已插入新工序，请保存")
+        level = get_process_level(self.current.processes[row])
+        insert_at = row if clicked is before_btn else descendant_end(self.current.processes, row)
+        self._insert_process_at(insert_at, "已插入同级工序，请保存", level=level)
 
-    def _insert_process_at(self, index: int, status_text: str) -> None:
+    def _insert_process_at(self, index: int, status_text: str, level: int = 1) -> None:
         if not self.current:
             return
         self.proc_editor.commit()
         proc = copy.deepcopy(DEFAULT_PROCESS)
+        proc["level"] = max(1, min(3, int(level)))
         index = max(0, min(index, len(self.current.processes)))
         self.current.processes.insert(index, proc)
+        normalize_process_sequence(self.current.processes)
         self._reload_proc_list(select_proc=proc)
         self.tabs.setCurrentWidget(self.proc_editor)
         self._schedule_preview()
@@ -708,12 +833,69 @@ class MainWindow(QMainWindow):
         row = self.proc_list.currentRow()
         if row < 0:
             return
-        del self.current.processes[row]
+        end = descendant_end(self.current.processes, row)
+        del self.current.processes[row:end]
+        normalize_process_sequence(self.current.processes)
         self._reload_proc_list()
         self._schedule_preview()
 
+    def action_promote_proc(self) -> None:
+        self._change_proc_level(-1)
+
+    def action_demote_proc(self) -> None:
+        if self.proc_list.currentRow() == 0:
+            QMessageBox.information(self, "无法降级", "第一道工序不能降级为子级。")
+            return
+        self._change_proc_level(1)
+
+    def _change_proc_level(self, delta: int) -> None:
+        if not self.current:
+            return
+        row = self.proc_list.currentRow()
+        if row < 0:
+            return
+        self.proc_editor.commit()
+        end = descendant_end(self.current.processes, row)
+        block = self.current.processes[row:end]
+        levels = [get_process_level(p) for p in block]
+        if delta < 0 and min(levels) <= 1:
+            QMessageBox.information(self, "无法升级", "一级工序不能继续升级。")
+            return
+        if delta > 0 and max(levels) >= 3:
+            QMessageBox.information(self, "无法降级", "三级工序不能继续降级。")
+            return
+        for proc in block:
+            proc["level"] = get_process_level(proc) + delta
+        normalize_process_sequence(self.current.processes)
+        self._reload_proc_list(select_proc=block[0])
+        self._schedule_preview()
+        self.status.showMessage("工序层级已调整，请保存")
+
+    def action_move_proc_up(self) -> None:
+        if not self.current:
+            return
+        row = self.proc_list.currentRow()
+        if row <= 0:
+            return
+        prev = row - 1
+        while prev > 0 and get_process_level(self.current.processes[prev]) > get_process_level(self.current.processes[prev - 1]):
+            prev -= 1
+        self._move_process_block(row, prev)
+
+    def action_move_proc_down(self) -> None:
+        if not self.current:
+            return
+        row = self.proc_list.currentRow()
+        if row < 0:
+            return
+        end = descendant_end(self.current.processes, row)
+        if end >= len(self.current.processes):
+            return
+        next_end = descendant_end(self.current.processes, end)
+        self._move_process_block(row, next_end)
+
     # ---------- 校验 / 预览 ----------
-    def _ensure_valid_for_export(self) -> bool:
+    def _ensure_valid_for_export(self, for_archive: bool = False) -> bool:
         if not self.current:
             QMessageBox.warning(self, "提示", "请先选择产品")
             return False
@@ -726,6 +908,21 @@ class MainWindow(QMainWindow):
                 "请先修正以下问题：\n\n" + "\n".join(result.errors)
             )
             return False
+        if for_archive and result.warnings:
+            blank_warnings = [w for w in result.warnings if "为空" in w or "草稿" in w]
+            if blank_warnings:
+                msg = "\n".join(blank_warnings[:12])
+                if len(blank_warnings) > 12:
+                    msg += f"\n... 还有 {len(blank_warnings) - 12} 条"
+                ret = QMessageBox.question(
+                    self, "归档包含草稿内容",
+                    "检测到部分工序内容为空，可能仍是草稿。\n\n"
+                    f"{msg}\n\n仍要归档定稿吗？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                if ret != QMessageBox.Yes:
+                    return False
         return True
 
     def _current_image_dir(self) -> Path | None:
@@ -835,15 +1032,19 @@ class MainWindow(QMainWindow):
             return
         self.meta_editor.commit()
         self.proc_editor.commit()
+        self._pending_preview_anchor = self._current_proc_anchor()
         try:
             data = ProductData(self.current.product, self.current.processes,
                               self.current.to_dict())
             # 用绝对路径让临时文件能正确加载图片
             model = self.current.model or "preview"
             img_dir = self.current.image_dir
-            html = render_manual(data, image_base=img_dir.as_uri())
+            html = render_manual(data, image_base=img_dir.as_uri(), image_dir=img_dir)
             self._preview_html_path.write_text(html, encoding="utf-8")
-            self.preview.load(QUrl.fromLocalFile(str(self._preview_html_path)))
+            url = QUrl.fromLocalFile(str(self._preview_html_path))
+            if self._pending_preview_anchor:
+                url.setFragment(self._pending_preview_anchor)
+            self.preview.load(url)
             self.status.showMessage(f"已刷新预览（{model}）")
         except Exception as e:
             self.status.showMessage(f"预览渲染失败：{e}")

@@ -21,6 +21,7 @@ from core.paths import (
     SOP_PACKAGES_DIR, sop_package_dir, sop_yaml_path, sop_images_dir,
     sop_output_dir,
 )
+from core.process_utils import normalize_process_sequence
 
 DEFAULT_PRODUCT = {
     "model": "",
@@ -35,7 +36,9 @@ DEFAULT_PRODUCT = {
 DEFAULT_PROCESS = {
     "name": "新工序",
     "key": False,
-    "operations": [""],
+    "level": 1,
+    "work_time_min": "",
+    "operations": [],
     "notes": [],
     "images": [],
     "tools": [],
@@ -128,8 +131,9 @@ class Product:
             product=raw.get("product", copy.deepcopy(DEFAULT_PRODUCT)),
             processes=raw.get("processes", []),
         )
-        # 记快照用于"是否修改"判定
-        prod._snapshot = copy.deepcopy(raw)
+        normalize_process_sequence(prod.processes)
+        # 记快照用于"是否修改"判定；自动补默认 level 不算用户修改
+        prod._snapshot = copy.deepcopy({"product": prod.product, "processes": prod.processes})
         return prod
 
     def save(self, current_user: str) -> None:
@@ -139,6 +143,7 @@ class Product:
         """
         if not current_user:
             raise ValueError("用户名未设置，无法保存")
+        normalize_process_sequence(self.processes)
 
         # ===== 比较 product 段 =====
         snap_product = self._snapshot.get("product", {})
@@ -247,6 +252,8 @@ def clone_product(src: Product, new_model: str) -> Product:
     for p in new_procs:
         p["images"] = []
         p.pop("_meta", None)
+        p.setdefault("level", 1)
+        p.setdefault("work_time_min", "")
     return Product(model=new_model, product=new_prod, processes=new_procs)
 
 

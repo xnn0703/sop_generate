@@ -1,5 +1,5 @@
-{#- 工艺流程图（可分页）-#}
-{#- 输入：product, processes（全量，用于判断是否有关键工序）, flow_chunk, flow_index, flow_total -#}
+{#- 工艺流程图（多级工序：主流程 + 组内展开，可分页）-#}
+{#- 输入：product, processes（全量）, flow_chunk, flow_index, flow_total -#}
 <section class="page page-portrait">
   <table class="head">
     <tr class="company-row"><td colspan="6">{{ product.company }}</td></tr>
@@ -29,16 +29,37 @@
     <div class="cont-mark">↑ 接上页</div>
     <div class="arrow">↓</div>
     {%- endif %}
+
     {%- for proc in flow_chunk %}
-    <div class="node">{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</div>
-    {%- if not loop.last %}
-    <div class="arrow">↓</div>
-    {%- elif flow_index < flow_total %}
+      {%- if proc._level == 1 %}
+      <div class="flow-group">
+        <div class="node main-node">{{ proc._proc_number }} {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</div>
+        {%- if proc._has_children %}
+        <div class="children">
+        {%- endif %}
+      {%- else %}
+          <div class="child-node level-{{ proc._level }}">{{ proc._proc_number }} {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</div>
+      {%- endif %}
+
+      {%- set next_proc = flow_chunk[loop.index] if not loop.last else none %}
+      {%- if proc._level == 1 and not proc._has_children %}
+      </div>
+        {%- if not loop.last %}
+      <div class="arrow">↓</div>
+        {%- endif %}
+      {%- elif proc._level > 1 and (next_proc is none or next_proc._level == 1) %}
+        </div>
+      </div>
+        {%- if not loop.last %}
+      <div class="arrow">↓</div>
+        {%- endif %}
+      {%- endif %}
+    {%- endfor %}
+
+    {%- if flow_index < flow_total %}
     <div class="arrow">↓</div>
     <div class="cont-mark">续下页</div>
-    {%- endif %}
-    {%- endfor %}
-    {%- if flow_index == flow_total and (processes | selectattr('key') | list) %}
+    {%- elif (processes | selectattr('key') | list) %}
     <div class="note">注：<span class="star">★</span> 为关键工序</div>
     {%- endif %}
   </div>

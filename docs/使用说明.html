@@ -447,13 +447,12 @@
   </p>
   <ol class="steps">
     <li>打开上面的下载页面，找到最新版本（页面顶部的那个）</li>
-    <li>在 <strong>🪟 Windows 下载</strong> 章节，把<strong>所有 5 个分卷全部下载</strong>到同一文件夹：
+    <li>在 <strong>Windows 下载</strong> 章节，把页面列出的<strong>所有分卷全部下载</strong>到同一文件夹：
       <pre><code>sop_generate-win-vX.Y.Z.7z.001
 sop_generate-win-vX.Y.Z.7z.002
 sop_generate-win-vX.Y.Z.7z.003
-sop_generate-win-vX.Y.Z.7z.004
-sop_generate-win-vX.Y.Z.7z.005</code></pre>
-      <div class="danger"><strong>5 个必须全部下载</strong>且放在<strong>同一文件夹</strong>，缺一个解压失败</div>
+...</code></pre>
+      <div class="danger"><strong>所有分卷必须全部下载</strong>且放在<strong>同一文件夹</strong>，缺一个解压失败</div>
     </li>
     <li>在 5 个分卷所在文件夹里，<strong>右键 <code>.7z.001</code></strong>（注意是 001 那一个）→ 选你装的解压软件 → <strong>解压到当前位置</strong></li>
     <li>得到 <code>sop_generate-win/</code> 文件夹</li>
@@ -471,25 +470,13 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
 
   <h3>2.2 macOS 安装</h3>
 
-  <h4>📦 准备工作</h4>
-  <ol class="steps">
-    <li>装一个支持 7z 分卷的解压软件——任意都可以：
-      <a href="https://www.keka.io/" target="_blank">Keka</a>（免费）/
-      <a href="https://theunarchiver.com/" target="_blank">The Unarchiver</a>（免费）/
-      <code>brew install p7zip</code>（终端方式）等。已有解压软件可以跳过</li>
-    <li>装 Microsoft Edge 或 Google Chrome（PDF 导出用）</li>
-  </ol>
+  <div class="info">当前云端发版只提供 Windows 包。macOS 版本如需测试或内部使用，请在 macOS 开发机上从项目根目录运行 <code>bash packaging/build_macos.sh</code> 本地生成。</div>
 
-  <h4>📥 下载与解压</h4>
-  <p style="text-align:center;margin: 12px 0;">
-    <a class="dl-link" href="https://gitee.com/soft-hertz/sop_generate-releases/releases" target="_blank">
-      📥 打开发版下载页面
-    </a>
-  </p>
   <ol class="steps">
-    <li>打开上面的下载页面，在 <strong>🍎 macOS 下载</strong> 章节下载<strong>所有 4 个分卷</strong>到同一文件夹</li>
-    <li>双击 <code>.7z.001</code>（解压软件会自动识别）→ 解压</li>
-    <li>得到 <code>sop_generate-mac-vX.Y.Z/</code> 文件夹，建议放在 <code>~/Applications/</code> 或桌面</li>
+    <li>在 macOS 开发机上进入项目目录</li>
+    <li>运行 <code>bash packaging/build_macos.sh</code></li>
+    <li>生成目录为 <code>dist/sop_generate-mac-vX.Y.Z/</code>，也可自行压缩后内部传递</li>
+    <li>PDF 导出仍需本机安装 Microsoft Edge 或 Google Chrome</li>
   </ol>
 
   <h4>🚀 首次启动</h4>
@@ -550,9 +537,9 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
   <h2>5. 主界面介绍</h2>
 
   <img src="images/main-ui.png" alt="SOP Generate 主界面" class="screenshot">
-  <p class="screenshot-caption">SOP Generate 主界面（v1.1.1）</p>
+  <p class="screenshot-caption">SOP Generate 主界面（v1.2.3）</p>
 
-  <p>整体布局分三栏：左侧 <strong>产品 + 工序列表</strong>（每个工序右侧显示 · 最后修改人，底部可追加/插入/删除工序），中间 <strong>编辑区</strong>（产品信息 / 工序编辑两个标签页，底部显示当前工序的创建/修改追溯信息），右侧 <strong>HTML 实时预览</strong>。顶部是工具栏，标题栏显示当前用户名。</p>
+  <p>整体布局分三栏：左侧 <strong>产品 + 多级工序列表</strong>（每个工序显示自动编号、标准工时、最后修改人，底部可追加同级/子级、插入、升降级、移动、删除），中间 <strong>编辑区</strong>（产品信息 / 工序编辑两个标签页，底部显示当前工序的创建/修改追溯信息），右侧 <strong>HTML 实时预览</strong>。顶部是工具栏，标题栏显示当前用户名。</p>
 
 
   <h3>5.1 工具栏按钮</h3>
@@ -571,7 +558,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
       <tr><td><span class="tb-btn">导出 PDF</span></td><td>渲染为 PDF 文件</td><td>给车间打印纸质</td></tr>
       <tr><td><span class="tb-btn">派生新产品</span></td><td>复制当前 SOP 作为新 SOP 的起点</td><td>类似产品快速建模</td></tr>
       <tr><td><span class="tb-btn">打开图片目录</span></td><td>用资源管理器打开当前 SOP 的 images 目录</td><td>批量管理图片</td></tr>
-      <tr><td><span class="tb-btn">刷新预览</span></td><td>强制重新渲染右侧预览</td><td>预览未自动刷新时</td></tr>
+      <tr><td><span class="tb-btn">刷新预览</span></td><td>强制重新渲染右侧预览，并回到当前选中的工序页</td><td>预览未自动刷新时</td></tr>
       <tr><td><span class="tb-btn">帮助</span></td><td>显示版本号 + 打开本使用手册</td><td>查版本、查使用方法</td></tr>
     </tbody>
   </table>
@@ -580,9 +567,9 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
   <table>
     <thead><tr><th>区域</th><th>作用</th></tr></thead>
     <tbody>
-      <tr><td><strong>左侧</strong></td><td>上半：所有 SOP 列表；下半：当前 SOP 的所有工序，<strong>工序行右侧显示 · 最后修改人</strong>；下面 ＋／－ 增删</td></tr>
+      <tr><td><strong>左侧</strong></td><td>上半：所有 SOP 列表；下半：当前 SOP 的多级工序，支持同级/子级、升降级、整体移动父子工序块</td></tr>
       <tr><td><strong>中间</strong></td><td>编辑区。两个标签：<strong>产品信息</strong>（封面）/ <strong>工序编辑</strong>（当前工序所有字段 + 底部修改追溯信息）</td></tr>
-      <tr><td><strong>右侧</strong></td><td>HTML 实时预览，编辑字段后约 0.6 秒自动刷新</td></tr>
+      <tr><td><strong>右侧</strong></td><td>HTML 实时预览，编辑字段后约 0.6 秒自动刷新；左侧选中哪个工序，预览会定位到对应工序页</td></tr>
     </tbody>
   </table>
 </section>
@@ -596,8 +583,9 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <li>工具栏 <span class="tb-btn">新建 SOP</span></li>
     <li>弹窗输入<strong>产品型号</strong>：
       <ul>
-        <li>只能含字母、数字、下划线、横线（不能含中文、空格、特殊符号）</li>
-        <li>例：<code>XESA01</code>、<code>RX-2000</code>、<code>DEMO_v2</code></li>
+        <li>可以使用中文、英文、数字等任意语言文字</li>
+        <li>不能包含文件系统不允许字符：<code>\ / : * ? " &lt; &gt; |</code>，也不要以点号或空格结尾</li>
+        <li>例：<code>XESA01</code>、<code>RX-2000</code>、<code>演示产品_v2</code></li>
       </ul>
     </li>
     <li>确定后软件自动创建工程目录：
@@ -656,38 +644,52 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
 <section id="process">
   <h2>7. 工序编辑</h2>
 
-  <h3>7.1 追加工序</h3>
+  <h3>7.1 追加同级 / 子级工序</h3>
   <ol class="steps">
     <li>左侧选中 SOP</li>
-    <li>左下角点 <strong>＋ 工序</strong> 按钮</li>
-    <li>新工序出现在列表底部，名字默认"新工序"，标记当前用户为创建者</li>
+    <li>选中一个已有工序后，点 <strong>＋ 同级</strong> 可在该工序块后添加同级工序</li>
+    <li>点 <strong>＋ 子级</strong> 可添加下一层工序，最多三级，例如 <code>3-1-1</code></li>
+    <li>新工序名字默认"新工序"，标记当前用户为创建者</li>
     <li>切到 <strong>"工序编辑"</strong> 标签页填字段</li>
   </ol>
 
   <h3>7.2 插入工序</h3>
   <ol class="steps">
     <li>左侧先选中一个已有工序</li>
-    <li>点 <strong>插入工序</strong></li>
+    <li>点 <strong>插入</strong></li>
     <li>弹窗选择 <strong>插入到前面</strong> 或 <strong>插入到后面</strong>（默认后面）</li>
-    <li>新工序插入后，后续编号自动重排，右侧预览同步刷新</li>
+    <li>新工序按同级插入，后续编号自动重排，右侧预览同步刷新</li>
     <li>填好字段后点 <span class="tb-btn">保存</span></li>
   </ol>
 
-  <h3>7.3 删除工序</h3>
+  <h3>7.3 调整层级</h3>
+  <ol class="steps">
+    <li>选中工序后点 <strong>← 升级</strong> 或 <strong>→ 降级</strong></li>
+    <li>软件最多支持三级工序，一级不能继续升级，三级不能继续降级</li>
+    <li>父级工序升降级时，其子级会跟随调整，避免编号断裂</li>
+  </ol>
+
+  <h3>7.4 删除工序</h3>
   <ol class="steps">
     <li>左侧选中要删除的工序</li>
     <li>点 <strong>－ 工序</strong></li>
+    <li>如果删除的是父级工序，其子级也会一起删除</li>
     <li>立即生效，不二次确认。误删后<strong>必须重新填一遍</strong>，建议删除前用 <span class="tb-btn">保存</span> 备份</li>
   </ol>
 
-  <h3>7.4 调整工序顺序（拖拽）</h3>
+  <h3>7.5 调整工序顺序（拖拽 / 上下移动）</h3>
   <ol class="steps">
     <li>左侧工序列表里<strong>按住鼠标左键拖动</strong></li>
-    <li>松开后顺序立即生效，工序编号、流程图、工序详情页全部自动重排</li>
+    <li>也可以使用 <strong>↑ 上移</strong> / <strong>↓ 下移</strong></li>
+    <li>父级工序移动时，子级整体跟随；松开后工序编号、流程图、工序详情页全部自动重排</li>
+    <li>拖拽按真实工序数据移动，不按工序名称匹配；即使两个工序重名，也会移动当前选中的那一个</li>
     <li>记得点 <span class="tb-btn">保存</span></li>
   </ol>
 
-  <h3>7.5 标记关键工序 ★</h3>
+  <h3>7.6 标准工时</h3>
+  <p>工序编辑区的 <strong>标准工时</strong> 填分钟数字。导出时自动显示：<code>45</code> → <code>45min</code>，<code>60</code> → <code>1h</code>，<code>75</code> → <code>1h15min</code>；不填显示 <code>—</code>。</p>
+
+  <h3>7.7 标记关键工序 ★</h3>
   <p>涉及静电敏感器件、精密装配等的工序应标记。</p>
 
   <ol class="steps">
@@ -730,13 +732,14 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
 <section id="fields">
   <h2>9. 字段填写规则</h2>
 
-  <p>每个工序有 6 类字段。v1.1.0 起<strong>所有字段都没有数量硬限制</strong>，超出单页容量会自动分页显示。</p>
+  <p>每个工序有层级、工时和 6 类内容字段。v1.2.0 起内容字段允许为空，适合先搭 SOP 框架；超出单页容量会自动分页显示。</p>
 
   <h3>9.1 操作说明</h3>
   <table>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
       <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 6 条，超出自动分多页</td></tr>
+      <tr><td>可否为空</td><td>可以。为空时按草稿占位导出，归档定稿会二次确认</td></tr>
       <tr><td>分页示例</td><td>14 条操作说明 → 自动分 3 页（6+6+2），页头标 (1/3) (2/3) (3/3)</td></tr>
       <tr><td>字符长度</td><td>不强制，建议每条 ≤ 30 个汉字</td></tr>
       <tr><td>推荐做法</td><td><strong>超过 6 条优先把工序拆成两道</strong>，每道有自己的图片/工具/材料，比续页更清晰</td></tr>
@@ -748,6 +751,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
       <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 4 条，超出自动分多页</td></tr>
+      <tr><td>可否为空</td><td>可以</td></tr>
       <tr><td>编号</td><td>自动加 ①、②、③、④...（续页继续序号）</td></tr>
       <tr><td>字符长度</td><td>不强制，建议每条 ≤ 28 个汉字</td></tr>
     </tbody>
@@ -758,6 +762,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     <thead><tr><th>项目</th><th>规则</th></tr></thead>
     <tbody>
       <tr><td>数量</td><td><span class="badge badge-green">无上限</span>，单页 4 项，超出自动分多页</td></tr>
+      <tr><td>可否为空</td><td>可以</td></tr>
       <tr><td>字符长度</td><td>不强制，建议 ≤ 10 个汉字</td></tr>
     </tbody>
   </table>
@@ -767,6 +772,9 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     实际页数 = 这五项中需要最多页数的那一项，每一页同时显示各字段的当前批次。
     举例：12 条 ops + 6 条 notes + 5 项 tools + 7 张图 → 总页数 = max(2,2,2,2) = 2 页。
   </div>
+
+  <h3>9.4 多级工序与父级摘要</h3>
+  <p>工序最多三级。父级工序如果自己填写了操作说明、图片等内容，会生成完整详情页；如果父级只是分组、自己没有内容，会生成子工序摘要页；末级工序即使为空，也会生成可后续填写的占位详情页。</p>
 </section>
 
 <!-- ====================== 10. 图片管理 ====================== -->
@@ -820,7 +828,19 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
     </div>
   </div>
 
-  <h3>10.3 图片大小建议</h3>
+  <h3>10.3 手动调整图片布局</h3>
+  <ol class="steps">
+    <li>在工序编辑区先拖入或填写图片文件名</li>
+    <li>点击图片区域右上角 <strong>编辑布局</strong></li>
+    <li>在弹窗画布中直接拖动图片本体调整位置，拖动右下角蓝色方块等比缩放</li>
+    <li>选中图片后可点 <strong>左转 90°</strong> / <strong>右转 90°</strong> 调整手机照片方向</li>
+    <li>图片只能在工序详情页右侧固定图片画布内移动，不能超出画布，也不会改变整张 A3 表格布局</li>
+    <li>点确定后，软件把位置、大小和旋转角度保存为百分比布局，HTML 预览和 PDF 导出保持一致</li>
+  </ol>
+
+  <div class="tip">不点"编辑布局"时，图片继续使用自动布局；点"清除手动布局"后会恢复自动布局。</div>
+
+  <h3>10.4 图片大小建议</h3>
   <table>
     <thead><tr><th>项目</th><th>建议</th></tr></thead>
     <tbody>
@@ -837,7 +857,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
   <h2>11. 预览与导出</h2>
 
   <h3>11.1 实时预览</h3>
-  <p>右侧是 HTML 实时预览。任何字段改动后约 <strong>0.6 秒</strong>自动刷新。如果觉得卡，工具栏点 <span class="tb-btn">刷新预览</span> 强制刷新。</p>
+  <p>右侧是 HTML 实时预览。任何字段改动后约 <strong>0.6 秒</strong>自动刷新。如果觉得卡，工具栏点 <span class="tb-btn">刷新预览</span> 强制刷新。刷新完成后，预览会自动回到左侧当前选中的工序页，不会每次跳回封面。</p>
 
   <h3>11.2 导出 HTML</h3>
   <ol class="steps">
@@ -941,6 +961,7 @@ sop_generate-win-vX.Y.Z.7z.005</code></pre>
   <ul>
     <li><strong>同日多次归档</strong>：自动加序号 <code>_2/</code>、<code>_3/</code>...不覆盖之前的</li>
     <li><strong>校验未通过</strong>：必填字段缺失、图片找不到等会拒绝归档，先修好再归档</li>
+    <li><strong>存在草稿内容</strong>：如果有空工序或空操作说明，软件会弹窗二次确认后再归档</li>
     <li><strong>用户名必须设置</strong>：未设用户名不能归档</li>
     <li><strong>PDF 失败不阻塞</strong>：没装 Edge/Chrome 时 PDF 会跳过，但 HTML 仍生成</li>
   </ul>

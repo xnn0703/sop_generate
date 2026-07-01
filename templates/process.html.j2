@@ -1,23 +1,25 @@
-{#- 单个工序详情页（横向 A3，齐头分页：每页各字段独立切片）-#}
-{#- 输入：proc（含 _proc_index / _sub_index / _sub_total / _is_continuation / _ops_chunk / _notes_chunk / _tools_chunk / _mats_chunk / _images_chunk / _*_start_index）-#}
+{#- 单个工序详情/摘要页（横向 A3）-#}
+{#- detail：齐头分页；summary：父级无内容但有子级时的工序组摘要页 -#}
 {%- set sub_total = proc._sub_total -%}
 {%- set sub_index = proc._sub_index -%}
-{%- set is_cont   = proc._is_continuation -%}
 {%- set images = proc._images_chunk -%}
 {%- set n_imgs = images | length -%}
-<section class="page page-landscape">
+<section class="page page-landscape" id="proc-{{ proc._proc_number }}-{{ sub_index }}">
   <div class="sheet">
   <table class="proc">
     <colgroup>
-      <col style="width:14%"><col style="width:14%"><col style="width:14%">
-      <col style="width:18%"><col style="width:14%"><col style="width:6%">
-      <col style="width:8%"><col style="width:12%">
+      <col style="width:12%"><col style="width:11%"><col style="width:11%">
+      <col style="width:9%"><col style="width:18%"><col style="width:9%">
+      <col style="width:12%"><col style="width:5%"><col style="width:5%">
+      <col style="width:8%">
     </colgroup>
     <tr>
       <td rowspan="2" class="title-cell">{{ product.model }}<br>作业指导书</td>
       <td class="h-label">产品名称</td>
       <td class="h-label">产品型号</td>
+      <td class="h-label">工序编号</td>
       <td class="h-label">工　序</td>
+      <td class="h-label">标准工时</td>
       <td class="h-label">文件编号</td>
       <td class="h-label">版本</td>
       <td class="h-label">页数</td>
@@ -26,18 +28,45 @@
     <tr>
       <td class="h-value">{{ product.name }}</td>
       <td class="h-value">{{ product.model }}</td>
+      <td class="h-value">{{ proc._proc_number }}</td>
       <td class="h-value">
         {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}
         {%- if sub_total > 1 %} <small>（{{ sub_index }}/{{ sub_total }}）</small>{% endif %}
       </td>
+      <td class="h-value">{{ proc._work_time_text }}</td>
       <td class="h-value">{{ product.doc_id }}</td>
       <td class="h-value">{{ product.version }}</td>
-      <td class="h-value">{{ proc._proc_index }} / {{ total }}</td>
+      <td class="h-value">{{ proc._proc_number }} / {{ total }}</td>
       <td class="h-value">{{ product.publish_date }}</td>
     </tr>
 
+    {%- if proc._page_type == 'summary' %}
     <tr>
-      <td class="ops-cell ops-main" colspan="3">
+      <td class="summary-cell" colspan="10">
+        <div class="summary-title">{{ proc._proc_number }} {{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %} · 子工序摘要</div>
+        <table class="summary-table">
+          <tr>
+            <th style="width:16%;">工序编号</th>
+            <th style="width:44%;">工序名称</th>
+            <th style="width:16%;">标准工时</th>
+            <th style="width:12%;">关键</th>
+            <th style="width:12%;">层级</th>
+          </tr>
+          {%- for child in proc._children_summary %}
+          <tr>
+            <td>{{ child._proc_number }}</td>
+            <td class="summary-name level-{{ child._level }}">{{ child.name }}</td>
+            <td>{{ child._work_time_text }}</td>
+            <td>{% if child.key %}<span class="star">★</span>{% endif %}</td>
+            <td>{{ child._level }} 级</td>
+          </tr>
+          {%- endfor %}
+        </table>
+      </td>
+    </tr>
+    {%- else %}
+    <tr>
+      <td class="ops-cell ops-main" colspan="4">
         <div class="sec-title">
           操作说明{% if sub_total > 1 %}（{{ sub_index }}/{{ sub_total }}）{% endif %}：
         </div>
@@ -48,18 +77,26 @@
           {%- endfor %}
         </ol>
         {%- else %}
-        <div class="cont-overlay">（无内容）</div>
+        <div class="cont-overlay">（待填写）</div>
         {%- endif %}
       </td>
-      <td class="pic-cell imgs-{{ n_imgs }}" colspan="5" rowspan="3">
+      <td class="pic-cell imgs-{{ n_imgs }}{% if proc._manual_images %} manual-layout{% endif %}" colspan="6" rowspan="3">
         {%- if n_imgs == 0 %}
         &nbsp;
+        {%- elif proc._manual_images %}
+        <div class="img-canvas">
+          {%- for img in images %}
+          <div class="manual-img-box" data-rotation="{{ img._layout.rotation | default(0) }}" style="left:{{ img._layout.x }}%; top:{{ img._layout.y }}%; width:{{ img._layout.w }}%; height:{{ img._layout.h }}%;">
+            <img src="{{ img._src }}" alt="{{ proc.name }}-{{ loop.index }}">
+          </div>
+          {%- endfor %}
+        </div>
         {%- elif n_imgs == 1 %}
-        <img src="{{ image_base }}/{{ images[0] }}" alt="{{ proc.name }}">
+        <img src="{{ images[0]._src }}" alt="{{ proc.name }}">
         {%- else %}
         <div class="imgs">
           {%- for img in images %}
-          <img src="{{ image_base }}/{{ img }}" alt="{{ proc.name }}-{{ loop.index }}">
+          <img src="{{ img._src }}" alt="{{ proc.name }}-{{ loop.index }}">
           {%- endfor %}
         </div>
         {%- endif %}
@@ -67,7 +104,7 @@
     </tr>
 
     <tr>
-      <td class="ops-cell ops-note" colspan="3">
+      <td class="ops-cell ops-note" colspan="4">
         <div class="sec-title">
           注意事项{% if sub_total > 1 and proc._notes_chunk %}（{{ sub_index }}/{{ sub_total }}）{% endif %}：
         </div>
@@ -82,7 +119,7 @@
     </tr>
 
     <tr>
-      <td class="mat-cell" colspan="3">
+      <td class="mat-cell" colspan="4">
         <table class="mat">
           {%- set tools_chunk = proc._tools_chunk %}
           {%- set mats_chunk  = proc._mats_chunk %}
@@ -99,6 +136,7 @@
         </table>
       </td>
     </tr>
+    {%- endif %}
   </table>
 
   <table class="sign">

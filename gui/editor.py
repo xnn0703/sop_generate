@@ -40,6 +40,10 @@ class ProcessEditor(QWidget):
         self.name_edit = QLineEdit()
         self.name_edit.textChanged.connect(self._mark_changed)
         head_layout.addRow("工序名", self.name_edit)
+        self.work_time_edit = QLineEdit()
+        self.work_time_edit.setPlaceholderText("分钟数字，例如 45；为空显示 —")
+        self.work_time_edit.textChanged.connect(self._mark_changed)
+        head_layout.addRow("标准工时", self.work_time_edit)
         self.key_check = QCheckBox("关键工序（★）")
         self.key_check.toggled.connect(self._mark_changed)
         head_layout.addRow("", self.key_check)
@@ -97,10 +101,13 @@ class ProcessEditor(QWidget):
             return src.name
 
         self.img_editor.set_drop_callback(drop_cb)
+        self.img_editor.set_image_dir_provider(fn)
 
     def load(self, proc: dict[str, Any]) -> None:
         self._proc = proc
         self.name_edit.blockSignals(True); self.name_edit.setText(proc.get("name", "")); self.name_edit.blockSignals(False)
+        work_time = "" if proc.get("work_time_min") in (None, "") else str(proc.get("work_time_min"))
+        self.work_time_edit.blockSignals(True); self.work_time_edit.setText(work_time); self.work_time_edit.blockSignals(False)
         self.key_check.blockSignals(True); self.key_check.setChecked(bool(proc.get("key", False))); self.key_check.blockSignals(False)
         self.ops_editor.set_items(proc.get("operations") or [])
         self.notes_editor.set_items(proc.get("notes") or [])
@@ -123,6 +130,8 @@ class ProcessEditor(QWidget):
         if self._proc is None:
             return
         self._proc["name"] = self.name_edit.text().strip()
+        work_time = self.work_time_edit.text().strip()
+        self._proc["work_time_min"] = int(work_time) if work_time.isdigit() else ""
         self._proc["key"] = self.key_check.isChecked()
         self._proc["operations"] = self.ops_editor.items()
         self._proc["notes"] = self.notes_editor.items()

@@ -27,10 +27,10 @@
     </tr>
     {%- for proc in processes %}
     <tr>
-      <td>{{ loop.index }}</td>
-      <td>{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</td>
+      <td>{{ proc._proc_number }}</td>
+      <td class="toc-name level-{{ proc._level }}">{{ proc.name }}{% if proc.key %} <span class="star">★</span>{% endif %}</td>
       <td>{{ product.doc_id }}</td>
-      <td>{{ loop.index }}</td>
+      <td>{{ proc._proc_number }}</td>
     </tr>
     {%- endfor %}
   </table>

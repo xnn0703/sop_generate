@@ -95,6 +95,10 @@ table.toc th, table.toc td {
   text-align: center; height: 12mm;
 }
 table.toc th { background: #f3f3f3; font-weight: bold; }
+table.toc .toc-name { text-align: left; }
+table.toc .toc-name.level-1 { padding-left: 6mm; font-weight: bold; }
+table.toc .toc-name.level-2 { padding-left: 14mm; }
+table.toc .toc-name.level-3 { padding-left: 24mm; font-size: 13pt; }
 
 /* ===== 工艺流程图 ===== */
 .flow-title {
@@ -107,6 +111,31 @@ table.toc th { background: #f3f3f3; font-weight: bold; }
   border: 1.5pt solid #000; background: #eaf4ff;
   text-align: center; font-size: 16pt; font-weight: bold;
 }
+.flow .flow-group {
+  width: 150mm;
+  border: 1.2pt solid #000;
+  background: #fff;
+  padding: 3mm;
+}
+.flow .flow-group .main-node {
+  width: 100%;
+  margin: 0 auto;
+}
+.flow .children {
+  margin-top: 3mm;
+  border-top: 0.8pt dashed #999;
+  padding-top: 2mm;
+}
+.flow .child-node {
+  border: 0.8pt solid #777;
+  background: #f7fbff;
+  padding: 2mm 3mm;
+  margin: 1.5mm 0;
+  font-size: 12.5pt;
+  text-align: left;
+}
+.flow .child-node.level-2 { margin-left: 7mm; }
+.flow .child-node.level-3 { margin-left: 18mm; font-size: 11.5pt; }
 .flow .arrow { font-size: 20pt; margin: 2mm 0; }
 .flow .note { margin-top: 10mm; font-size: 13pt; color: #555; }
 .flow .cont-mark {
@@ -154,6 +183,36 @@ table.proc .h-value {
   font-size: 12pt;
 }
 
+/* 父级工序摘要页 */
+table.proc .summary-cell {
+  height: 188mm;
+  padding: 8mm 10mm;
+}
+table.proc .summary-title {
+  font-size: 18pt;
+  font-weight: bold;
+  text-align: center;
+  margin: 4mm 0 8mm;
+}
+table.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13pt;
+}
+table.summary-table th,
+table.summary-table td {
+  border: 1pt solid #000;
+  padding: 3mm;
+  height: 12mm;
+  text-align: center;
+  vertical-align: middle;
+}
+table.summary-table th { background: #f3f3f3; font-weight: bold; }
+table.summary-table .summary-name { text-align: left; }
+table.summary-table .summary-name.level-2 { padding-left: 10mm; }
+table.summary-table .summary-name.level-3 { padding-left: 22mm; }
+
 /* 操作说明 / 注意事项（左半） */
 table.proc .ops-cell { width: 42%; vertical-align: top; overflow: hidden; }
 table.proc .ops-cell.ops-main { height: 110mm; }
@@ -170,6 +229,7 @@ table.proc .pic-cell {
   text-align: center; vertical-align: middle;
   background: #fff; padding: 3mm;
   height: 188mm;
+  overflow: hidden;
 }
 table.proc .pic-cell img {
   max-width: 100%; object-fit: contain;
@@ -204,6 +264,30 @@ table.proc .pic-cell.imgs-4 img {
 
 table.proc .pic-cell .cont-overlay {
   color: #888; font-size: 14pt; padding: 30mm 0;
+}
+
+/* 手动图片布局：只能在右侧图片画布内定位 */
+table.proc .pic-cell.manual-layout { padding: 0; }
+table.proc .pic-cell .img-canvas {
+  position: relative;
+  width: 100%;
+  height: 188mm;
+  overflow: hidden;
+  background: #fff;
+}
+table.proc .pic-cell .manual-img-box {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+table.proc .pic-cell .manual-img-box img {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* 工具设备 / 作业材料 — 子表格 */
