@@ -104,8 +104,8 @@ jobs:
             echo "上传 ${NAME} (${size_mb} MB) 尝试 ${i}/6..."
             set +e
             http="$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
-              --max-time 900 --connect-timeout 45 \
-              --speed-time 240 --speed-limit 256 \
+              --connect-timeout 60 --max-time 900 \
+              --retry 3 --retry-delay 10 --retry-connrefused \
               -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
               -F "file=@${FILE}")"
             rc="$?"
