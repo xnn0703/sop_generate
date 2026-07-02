@@ -8,6 +8,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 _MAC_CANDIDATES = [
@@ -62,20 +63,39 @@ def export_pdf(html_path: Path, pdf_path: Path | None = None,
             "未找到 Chrome / Edge / Chromium。请安装其一，或用 --html-only 仅生成 HTML 后手动 ⌘P。"
         )
 
-    cmd = [
-        browser,
-        "--headless",
-        "--disable-gpu",
-        "--no-pdf-header-footer",
-        f"--print-to-pdf={pdf_path}",
-        html_path.as_uri(),
-    ]
+    if pdf_path.exists():
+        pdf_path.unlink()
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    with tempfile.TemporaryDirectory(prefix="sop_generate_pdf_") as profile_dir:
+        cmd = [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--no-pdf-header-footer",
+            f"--user-data-dir={profile_dir}",
+            f"--print-to-pdf={pdf_path}",
+            html_path.as_uri(),
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired as e:
+            if pdf_path.exists() and pdf_path.stat().st_size > 0:
+                return pdf_path
+            raise RuntimeError(
+                "浏览器导出 PDF 超时，且未生成有效 PDF。\n"
+                f"stdout: {e.stdout or ''}\nstderr: {e.stderr or ''}"
+            ) from e
+
     if result.returncode != 0 or not pdf_path.exists():
         raise RuntimeError(
             f"浏览器导出 PDF 失败（exit={result.returncode}）\n"
             f"stdout: {result.stdout}\nstderr: {result.stderr}"
         )
+    if pdf_path.stat().st_size <= 0:
+        raise RuntimeError("浏览器导出 PDF 失败：生成的 PDF 为空文件。")
 
     return pdf_path

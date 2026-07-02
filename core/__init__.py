@@ -1,6 +1,6 @@
 """sop_generate 核心模块"""
 
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 from .renderer import render_manual, ProductData, load_yaml
 from .validator import validate, ValidationError

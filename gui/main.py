@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
         self._preview_timer.timeout.connect(self._refresh_preview)
         self._preview_html_path = Path(tempfile.gettempdir()) / "sop_preview.html"
         self._pending_preview_anchor: str | None = None
+        self._preview_revision = 0
 
         self._build_toolbar()
         self._build_central()
@@ -1041,7 +1042,9 @@ class MainWindow(QMainWindow):
             img_dir = self.current.image_dir
             html = render_manual(data, image_base=img_dir.as_uri(), image_dir=img_dir)
             self._preview_html_path.write_text(html, encoding="utf-8")
+            self._preview_revision += 1
             url = QUrl.fromLocalFile(str(self._preview_html_path))
+            url.setQuery(f"rev={self._preview_revision}")
             if self._pending_preview_anchor:
                 url.setFragment(self._pending_preview_anchor)
             self.preview.load(url)

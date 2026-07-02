@@ -271,7 +271,7 @@ def write_html(data: ProductData, output_path: Path | None = None,
     默认输出到 sop_packages/<model>/output/<model>.html
     """
     model = data.product.get("model", "manual")
-    image_dir = paths.sop_image_dir(model)
+    image_dir = paths.sop_images_dir(model)
     html = render_manual(data, image_base=image_base, image_dir=image_dir)
 
     if output_path is None:
