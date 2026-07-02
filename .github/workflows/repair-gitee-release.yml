@@ -99,14 +99,55 @@ jobs:
           import json
           with open("/tmp/release.json", "r", encoding="utf-8") as f:
               data = json.load(f)
-          print(data.get("id") or "")
+          print((data.get("id") or "") if isinstance(data, dict) else "")
           PY
           )"
 
           if [ -z "$RID" ]; then
-            echo "::error::找不到 Gitee Release：${TAG}"
-            head -c 500 /tmp/release.json || true
-            exit 1
+            echo "Gitee Release ${TAG} 不存在，自动创建..."
+            curl -sS "${API}?access_token=${GITEE_TOKEN}" > /tmp/repo.json
+            DEFAULT_BRANCH="$(python3 - <<'PY'
+          import json
+          with open("/tmp/repo.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          print(data.get("default_branch") or "master")
+          PY
+          )"
+            export DEFAULT_BRANCH
+            python3 > /tmp/create_release.json <<'PY'
+          import json, os
+          tag = os.environ["TAG"]
+          body = f"""稳定版本 **{tag}**。
+
+          **Windows 下载**：把 sop_generate-win-{tag}.7z.001 / .002 ... 全部下载到同一文件夹，用 7-Zip 解压 .001。
+
+          **首次启动**：
+          - Windows: Defender 提示时点 "更多信息 → 仍要运行"
+          """
+          print(json.dumps({
+              "access_token": os.environ["GITEE_TOKEN"],
+              "tag_name": tag,
+              "target_commitish": os.environ["DEFAULT_BRANCH"],
+              "name": tag,
+              "body": body,
+              "prerelease": False,
+          }, ensure_ascii=False))
+          PY
+            curl -sS -X POST -H "Content-Type: application/json; charset=utf-8" \
+              -d @/tmp/create_release.json "${API}/releases" > /tmp/create_resp.json
+            RID="$(python3 - <<'PY'
+          import json
+          with open("/tmp/create_resp.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          print((data.get("id") or "") if isinstance(data, dict) else "")
+          PY
+          )"
+            if [ -z "$RID" ]; then
+              echo "::error::创建 Gitee Release 失败"
+              head -c 800 /tmp/create_resp.json || true
+              exit 1
+            fi
+            curl -sS "${API}/releases/${RID}?access_token=${GITEE_TOKEN}" > /tmp/release.json
           fi
 
           upload_one() {
@@ -119,7 +160,8 @@ jobs:
           name = os.environ["NAME"]
           with open("/tmp/release.json", "r", encoding="utf-8") as f:
               data = json.load(f)
-          print("yes" if any(a.get("name") == name for a in data.get("assets", [])) else "")
+          assets = data.get("assets", []) if isinstance(data, dict) else []
+          print("yes" if any(a.get("name") == name for a in assets) else "")
           PY
           )"
             if [ "$exists" = "yes" ]; then
