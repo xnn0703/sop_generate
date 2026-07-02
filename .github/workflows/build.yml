@@ -223,7 +223,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF##*/}"
           mapfile -t PARTS < <(find release-parts -type f -name '*.7z.*' | sort)
-          gh release upload "$TAG" "${PARTS[@]}" --clobber
+          gh release upload "$TAG" "${PARTS[@]}" --clobber --repo "$GITHUB_REPOSITORY"
           echo "✓ 全部分卷已追加到 GitHub Release"
 
       - name: 上传分卷到 Gitee Release（串行，仅 tag）

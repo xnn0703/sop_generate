@@ -1,7 +1,7 @@
-# 手动补传 Gitee Release 分卷
+# 手动补传 Release 分卷
 #
 # 用途：当主发版流程中某个 .7z.NNN 分卷上传超时失败，而 GitHub Actions
-# artifact 里仍保留完整分卷时，单独补传缺失分卷，不重新打包、不重建 release。
+# artifact 里仍保留完整分卷时，补传缺失分卷，不重新打包、不重建 release。
 name: repair-gitee-release
 
 on:
@@ -16,13 +16,13 @@ on:
         required: true
         default: "28534685925"
       part:
-        description: "要补传的分卷号，例如 001"
+        description: "要补传的分卷号，例如 001；填 all 表示全部分卷"
         required: true
-        default: "001"
+        default: "all"
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 jobs:
   upload-missing-part:
@@ -34,6 +34,7 @@ jobs:
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
       RELEASE_GITEE_OWNER: ${{ secrets.RELEASE_GITEE_OWNER }}
       RELEASE_GITEE_REPO: ${{ secrets.RELEASE_GITEE_REPO }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: 下载原始 Windows 分卷 artifact
@@ -50,7 +51,26 @@ jobs:
           set -e
           find release-parts -type f -name '*.7z.*' -print | sort | xargs -r ls -lh
 
-      - name: 补传指定分卷到 Gitee Release
+      - name: 补传分卷到 GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$PART" = "all" ]; then
+            mapfile -t PARTS < <(find release-parts -type f -name "sop_generate-win-${TAG}.7z.*" | sort)
+          else
+            PARTS=("release-parts/sop_generate-win-${TAG}.7z.${PART}")
+          fi
+          if [ "${#PARTS[@]}" -eq 0 ]; then
+            echo "::error::没有找到待补传分卷"
+            exit 1
+          fi
+          for f in "${PARTS[@]}"; do
+            test -f "$f" || { echo "::error::找不到分卷：$f"; exit 1; }
+          done
+          gh release upload "$TAG" "${PARTS[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          echo "✓ 分卷已补传到 GitHub Release"
+
+      - name: 补传分卷到 Gitee Release
         shell: bash
         run: |
           set -euo pipefail
@@ -61,14 +81,18 @@ jobs:
           fi
 
           API="https://gitee.com/api/v5/repos/${RELEASE_GITEE_OWNER}/${RELEASE_GITEE_REPO}"
-          FILE="release-parts/sop_generate-win-${TAG}.7z.${PART}"
-          NAME="$(basename "$FILE")"
-          export NAME
-
-          if [ ! -f "$FILE" ]; then
-            echo "::error::找不到分卷：$FILE"
+          if [ "$PART" = "all" ]; then
+            mapfile -t FILES < <(find release-parts -type f -name "sop_generate-win-${TAG}.7z.*" | sort)
+          else
+            FILES=("release-parts/sop_generate-win-${TAG}.7z.${PART}")
+          fi
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::没有找到待补传分卷"
             exit 1
           fi
+          for f in "${FILES[@]}"; do
+            test -f "$f" || { echo "::error::找不到分卷：$f"; exit 1; }
+          done
 
           curl -sS "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}" > /tmp/release.json
           RID="$(python3 - <<'PY'
@@ -85,7 +109,12 @@ jobs:
             exit 1
           fi
 
-          EXISTS="$(python3 - <<'PY'
+          upload_one() {
+            local file="$1"
+            local name size_mb exists http rc
+            name="$(basename "$file")"
+            export NAME="$name"
+            exists="$(python3 - <<'PY'
           import json, os
           name = os.environ["NAME"]
           with open("/tmp/release.json", "r", encoding="utf-8") as f:
@@ -93,30 +122,41 @@ jobs:
           print("yes" if any(a.get("name") == name for a in data.get("assets", [])) else "")
           PY
           )"
-
-          if [ "$EXISTS" = "yes" ]; then
-            echo "✓ ${NAME} 已存在，无需补传"
-            exit 0
-          fi
-
-          size_mb="$(du -m "$FILE" | cut -f1)"
-          for i in 1 2 3 4 5 6; do
-            echo "上传 ${NAME} (${size_mb} MB) 尝试 ${i}/6..."
-            set +e
-            http="$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
-              --connect-timeout 60 --max-time 900 \
-              --retry 3 --retry-delay 10 --retry-connrefused \
-              -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
-              -F "file=@${FILE}")"
-            rc="$?"
-            set -e
-            if [ "$rc" = "0" ] && { [ "$http" = "200" ] || [ "$http" = "201" ]; }; then
-              echo "✓ ${NAME} 补传完成"
-              exit 0
+            if [ "$exists" = "yes" ]; then
+              echo "✓ ${name} 已存在，无需补传"
+              return 0
             fi
-            echo "::warning::${NAME} 尝试 ${i} 失败 (curl rc=${rc} HTTP=${http}): $(head -c 300 /tmp/upload_resp.json 2>/dev/null || true)"
-            sleep $((i * 30))
+
+            size_mb="$(du -m "$file" | cut -f1)"
+            for i in 1 2 3 4 5 6; do
+              echo "上传 ${name} (${size_mb} MB) 尝试 ${i}/6..."
+              set +e
+              http="$(curl -sS -o /tmp/upload_resp.json -w "%{http_code}" \
+                --connect-timeout 60 --max-time 900 \
+                --retry 3 --retry-delay 10 --retry-connrefused \
+                -X POST "${API}/releases/${RID}/attach_files?access_token=${GITEE_TOKEN}" \
+                -F "file=@${file}")"
+              rc="$?"
+              set -e
+              if [ "$rc" = "0" ] && { [ "$http" = "200" ] || [ "$http" = "201" ]; }; then
+                echo "✓ ${name} 补传完成"
+                sleep 20
+                return 0
+              fi
+              echo "::warning::${name} 尝试 ${i} 失败 (curl rc=${rc} HTTP=${http}): $(head -c 300 /tmp/upload_resp.json 2>/dev/null || true)"
+              sleep $((i * 30))
+            done
+
+            echo "::error::${name} 经多次重试仍上传失败"
+            return 1
+          }
+
+          failed=0
+          for f in "${FILES[@]}"; do
+            upload_one "$f" || failed=1
           done
 
-          echo "::error::${NAME} 经多次重试仍上传失败"
-          exit 1
+          if [ "$failed" = "1" ]; then
+            exit 1
+          fi
+          echo "✓ 分卷已补传到 Gitee Release"
